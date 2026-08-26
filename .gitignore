@@ -1,0 +1,17 @@
+# Environment and Secrets
+.env
+*.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OS and Editor metadata
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary backups
+*.bak*
+scratch/

@@ -1,3 +1,15 @@
+> ### 🌐 [Homelab Sovereign Cluster Architecture](https://github.com/medzarka/homelab-nodes)
+> This repository is a modular component of the **Homelab Sovereign Multi-Node Cluster** — an enterprise-grade, privacy-first, self-hosted infrastructure spanning cloud VPS, on-premise compute servers, and edge ARM nodes.
+> 
+> * **Zero-Trust Network**: Multi-host WireGuard mesh interconnect via **Tailscale** with strict **Firewalld** zoning (`iptables: false`).
+> * **Unified Identity & Ingress**: Centralized reverse proxy via **Traefik v3**, **Authelia SSO (2FA)**, and **LLDAP Directory**.
+> * **Cluster Orchestration & GitOps**: High-availability **Docker Swarm** managed declaratively via **Arcane Cockpit**.
+> * **End-to-End Observability**: Centralized portal (**Homepage**), metrics (**Beszel**), real-time logs (**Dozzle**), and uptime monitoring (**Uptime Kuma**).
+> * **Sovereign Local AI & Compute**: Distributed inference (**LiteLLM**, **Ollama**, **Qdrant**, **Mem0**, **Hermes Agents**).
+> * **Private Cloud & Storage**: Encrypted data synchronization, automated backups, and multi-cloud mirrors.
+
+---
+
 # 🌐 Homelab Nodes (`homelab-nodes`) — Multi-Node Cluster Automation & Security Framework
 
 A unified, hardened, and automated node initialization suite designed to bootstrap machines and VPS instances into a secure **Docker Swarm + Tailscale Mesh** cluster managed via **Arcane Cockpit**.
@@ -13,7 +25,7 @@ A unified, hardened, and automated node initialization suite designed to bootstr
                      │ (Ports 22, 80, 443)                   │ (Port 22 only)
                      ▼                                       ▼
         ┌──────────────────────────┐            ┌──────────────────────────┐
-        │  MASTER NODE (zap-vps)   │            │  WORKER NODE (oci/rpi)   │
+        │  MASTER NODE (Cloud VPS) │            │  WORKER NODE (Compute/Edge)
         │  • Firewalld: 22, 80, 443│            │  • Firewalld: 22 only    │
         │  • tailscale0: TRUSTED   │            │  • tailscale0: TRUSTED   │
         │  • Journald: max 7 days  │            │  • Journald: max 7 days  │
@@ -156,7 +168,7 @@ sudo ./audit-node.sh --role worker
 ====================================================================
  Auditing Target Role: WORKER
  Timestamp:            2026-08-26T05:50:00+01:00
- Hostname:             oci01-flex
+ Hostname:             worker-node-01
 
 1. 🖥️ Operating System & Architecture
   [ PASS ] Operating System: Oracle Linux Server 9.4 (Kernel: 5.15.0-205.149.5.1.el9uek.aarch64)
