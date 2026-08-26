@@ -81,7 +81,7 @@ NODE_ROLE=MASTER
 NODE_NAME=${TS_HOSTNAME}
 TS_HOSTNAME=${TS_HOSTNAME}
 TS_AUTHKEY=${TS_AUTHKEY}
-TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---reset --advertise-exit-node}
+TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
@@ -210,7 +210,7 @@ SWARM_NETWORK=${SWARM_NETWORK}
 
 # Tailscale Authentication & Exit Node
 TS_AUTHKEY=
-TS_EXTRA_ARGS=--reset --advertise-exit-node
+TS_EXTRA_ARGS="--reset --advertise-exit-node"
 
 # Arcane Agent Token (Obtain from Arcane UI: http://${TS_IP}:${ARCANE_PORT} -> Nodes -> Add Node)
 ARCANE_AGENT_TOKEN=
