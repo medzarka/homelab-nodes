@@ -88,6 +88,9 @@ echo "Configuring 'trusted' zone for Tailscale mesh..."
 firewall-cmd --permanent --zone=drop --remove-interface=tailscale0 2>/dev/null || true
 firewall-cmd --permanent --zone=public --remove-interface=tailscale0 2>/dev/null || true
 firewall-cmd --permanent --zone=trusted --add-interface=tailscale0
+# Trust all incoming traffic from Tailscale CGNAT subnet (IPv4 & IPv6)
+firewall-cmd --permanent --zone=trusted --add-source=100.64.0.0/10
+firewall-cmd --permanent --zone=trusted --add-source=fd7a:115c:a1e0::/48
 
 # Ensure docker bridges are NOT in trusted to avoid ZONE_CONFLICT with docker daemon
 firewall-cmd --permanent --zone=trusted --remove-interface=docker0 2>/dev/null || true
