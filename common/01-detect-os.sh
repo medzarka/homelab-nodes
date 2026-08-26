@@ -6,12 +6,19 @@
 # Architectures: x86_64 (amd64), aarch64 (arm64)
 # ==============================================================================
 
-set -euo pipefail
+# Terminal formatting constants
+BOLD='\033[1m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+export BOLD RED GREEN YELLOW BLUE NC
 
 # Ensure running with superuser privileges
 ensure_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo "❌ Error: This script must be executed as root (or via sudo)." >&2
+    echo -e "${RED}❌ Error: This script must be executed as root (or via sudo).${NC}" >&2
     exit 1
   fi
 }
