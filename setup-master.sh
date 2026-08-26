@@ -65,6 +65,7 @@ if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/.env" ]; then
 else
   TS_HOSTNAME="${TS_HOSTNAME:-$(hostname)}"
   TS_AUTHKEY="${TS_AUTHKEY:-}"
+  TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
   DATA_DIR="${DATA_DIR:-/srv/data}"
   ARCANE_PORT="${ARCANE_PORT:-3552}"
   SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
@@ -80,7 +81,7 @@ NODE_ROLE=MASTER
 NODE_NAME=${TS_HOSTNAME}
 TS_HOSTNAME=${TS_HOSTNAME}
 TS_AUTHKEY=${TS_AUTHKEY}
-TS_EXTRA_ARGS=--reset
+TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---reset --advertise-exit-node}
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
@@ -207,9 +208,9 @@ SWARM_WORKER_TOKEN=${WORKER_JOIN_TOKEN}
 SHARED_NETWORK=${SHARED_NETWORK}
 SWARM_NETWORK=${SWARM_NETWORK}
 
-# Tailscale Authentication (Optional: Pre-authenticate worker)
+# Tailscale Authentication & Exit Node
 TS_AUTHKEY=
-TS_EXTRA_ARGS=--reset
+TS_EXTRA_ARGS=--reset --advertise-exit-node
 
 # Arcane Agent Token (Obtain from Arcane UI: http://${TS_IP}:${ARCANE_PORT} -> Nodes -> Add Node)
 ARCANE_AGENT_TOKEN=
@@ -238,6 +239,10 @@ echo ""
 echo " 🛡️ Firewall Security:"
 echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS)"
 echo "   • Tailscale Mesh: 100% Trusted for inter-node communication"
+echo "   • Kernel IP Forwarding: Enabled (IPv4/IPv6 forwarding active)"
+echo ""
+echo " 🚪 Tailscale Exit Node: Enabled (--advertise-exit-node)"
+echo "   👉 Approve route in Admin Console: https://login.tailscale.com/admin/machines"
 echo ""
 echo " 📄 Auto-Generated Worker Onboarding File: ${WORKER_JOIN_ENV}"
 echo "--------------------------------------------------------------------"

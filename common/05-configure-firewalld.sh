@@ -71,9 +71,17 @@ else
   firewall-cmd --permanent --zone=public --remove-service=https 2>/dev/null || true
 fi
 
-# Enable masquerading for container outbound NAT routing
+# Enable masquerading for container outbound NAT routing and Tailscale exit node
 echo "Enabling NAT masquerade on public zone..."
 firewall-cmd --permanent --zone=public --add-masquerade
+
+# Enable Linux Kernel IP Packet Forwarding (Required for Tailscale Exit Node & Subnet Routing)
+echo "Configuring Kernel IP packet forwarding in /etc/sysctl.d/99-tailscale-forwarding.conf..."
+cat << 'EOF' > /etc/sysctl.d/99-tailscale-forwarding.conf
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+EOF
+sysctl -p /etc/sysctl.d/99-tailscale-forwarding.conf 2>/dev/null || sysctl --system >/dev/null 2>&1 || true
 
 # 4. Configure trusted zone for Tailscale mesh
 echo "Configuring 'trusted' zone for Tailscale mesh..."

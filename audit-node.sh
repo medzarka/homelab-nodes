@@ -123,6 +123,14 @@ if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld;
     fail "Public zone NAT masquerading is DISABLED! Containers cannot route traffic outbound."
   fi
 
+  # Check Kernel IP Forwarding
+  IPV4_FWD="$(sysctl -n net.ipv4.ip_forward 2>/dev/null || cat /proc/sys/net/ipv4/ip_forward 2>/dev/null || echo '0')"
+  if [ "$IPV4_FWD" = "1" ]; then
+    pass "Kernel IPv4 packet forwarding is ENABLED (Tailscale Exit Node & routing active)."
+  else
+    warn "Kernel IPv4 forwarding is DISABLED! Enable with: sysctl -w net.ipv4.ip_forward=1"
+  fi
+
   if [ "$NODE_ROLE" = "master" ]; then
     if [[ "$PUB_SERVICES" =~ "http" ]] && [[ "$PUB_SERVICES" =~ "https" ]]; then
       pass "Master public zone permits HTTP (80) and HTTPS (443)."
@@ -287,6 +295,11 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
     TS_IP="$(docker exec tailscale tailscale ip -4 2>/dev/null || echo '')"
     if [ -n "$TS_IP" ]; then
       pass "Tailscale container is running (Mesh IP: ${TS_IP})."
+      # Check Exit Node Advertisement
+      TS_STATUS="$(docker exec tailscale tailscale status --json 2>/dev/null || echo '')"
+      if echo "$TS_STATUS" | grep -q '"ExitNodeOption":true'; then
+        pass "Tailscale Exit Node advertisement is ACTIVE on this node."
+      fi
     else
       warn "Tailscale container is running but Mesh IP not acquired (interactive login required)."
     fi

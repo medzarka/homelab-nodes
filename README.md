@@ -62,6 +62,10 @@ A unified, hardened, and automated node initialization suite designed to bootstr
 6. **Containerized Tailscale & Arcane**:
    - Tailscale runs inside a Docker container using host networking and `/dev/net/tun`.
    - Arcane Manager is deployed on the Master node; Arcane Agent is deployed on Worker nodes.
+7. **Tailscale Exit Node & Kernel IP Forwarding**:
+   - Automatically configures Linux kernel packet forwarding (`net.ipv4.ip_forward = 1` and `net.ipv6.conf.all.forwarding = 1` in `/etc/sysctl.d/99-tailscale-forwarding.conf`).
+   - Automatically advertises the node as a Tailscale Exit Node (`--advertise-exit-node`), allowing secure encrypted internet routing for your remote devices.
+
 
 ---
 
