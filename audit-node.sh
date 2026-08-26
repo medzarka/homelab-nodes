@@ -31,17 +31,17 @@ FAILED_CHECKS=0
 
 pass() {
   echo -e "  [ ${GREEN}PASS${NC} ] $1"
-  ((PASSED_CHECKS++))
+  PASSED_CHECKS=$((PASSED_CHECKS + 1))
 }
 
 warn() {
   echo -e "  [ ${YELLOW}WARN${NC} ] $1"
-  ((WARNING_CHECKS++))
+  WARNING_CHECKS=$((WARNING_CHECKS + 1))
 }
 
 fail() {
   echo -e "  [ ${RED}FAIL${NC} ] $1"
-  ((FAILED_CHECKS++))
+  FAILED_CHECKS=$((FAILED_CHECKS + 1))
 }
 
 info() {
