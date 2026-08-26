@@ -80,11 +80,11 @@ EOF
 echo "Applying hardened production /etc/docker/daemon.json..."
 mkdir -p /etc/docker
 
-# Note: "live-restore": true is strictly incompatible with Docker Swarm and will cause dockerd crash on Swarm nodes.
+# Note: "live-restore": true is strictly incompatible with Docker Swarm.
+# Note: "userland-proxy" must remain default (true) when "iptables": false to route published ports via Firewalld.
 cat << 'EOF' > /etc/docker/daemon.json
 {
   "iptables": false,
-  "userland-proxy": false,
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
