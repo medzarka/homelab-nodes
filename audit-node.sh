@@ -109,15 +109,13 @@ if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld;
 
   # Check Public Zone
   PUB_SERVICES="$(firewall-cmd --zone=public --list-services 2>/dev/null || echo '')"
-  PUB_MASQ="$(firewall-cmd --zone=public --query-masquerade 2>/dev/null && echo 'yes' || echo 'no')"
-
   if [[ "$PUB_SERVICES" =~ "ssh" ]]; then
     pass "Public zone permits SSH service."
   else
     fail "Public zone is missing SSH service!"
   fi
 
-  if [ "$PUB_MASQ" = "yes" ]; then
+  if firewall-cmd --zone=public --query-masquerade &>/dev/null || firewall-cmd --zone=public --list-all 2>/dev/null | grep -q "masquerade:[[:space:]]*yes"; then
     pass "Public zone NAT masquerading is ENABLED (Outbound container routing active)."
   else
     fail "Public zone NAT masquerading is DISABLED! Containers cannot route traffic outbound."
