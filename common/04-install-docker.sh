@@ -67,14 +67,23 @@ elif [ "$OS_FAMILY" = "rhel_like" ]; then
   dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
 
-# 3. Production Daemon Configuration Hardening
+# 3. Kernel Modules & Production Daemon Configuration Hardening
+echo "Loading required kernel modules (overlay, br_netfilter)..."
+modprobe overlay 2>/dev/null || true
+modprobe br_netfilter 2>/dev/null || true
+mkdir -p /etc/modules-load.d
+cat << 'EOF' > /etc/modules-load.d/docker-swarm.conf
+overlay
+br_netfilter
+EOF
+
 echo "Applying hardened production /etc/docker/daemon.json..."
 mkdir -p /etc/docker
 
+# Note: "live-restore": true is strictly incompatible with Docker Swarm and will cause dockerd crash on Swarm nodes.
 cat << 'EOF' > /etc/docker/daemon.json
 {
   "iptables": false,
-  "live-restore": true,
   "userland-proxy": false,
   "log-driver": "json-file",
   "log-opts": {

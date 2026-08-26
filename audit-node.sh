@@ -186,11 +186,11 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
       fail "Docker 'iptables: false' is MISSING in ${DAEMON_JSON}! Docker may expose published ports directly."
     fi
 
-    # Check live-restore
+    # Check Swarm Compatibility / live-restore
     if grep -q '"live-restore"[[:space:]]*:[[:space:]]*true' "$DAEMON_JSON"; then
-      pass "Docker 'live-restore: true' is configured (Zero-downtime container uptime)."
+      warn "Docker 'live-restore: true' is set. Note: this must be disabled if Docker Swarm is active."
     else
-      warn "Docker 'live-restore: true' is not set."
+      pass "Docker daemon configuration is compatible with Docker Swarm (live-restore omitted)."
     fi
 
     # Check logging driver and limits
