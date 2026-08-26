@@ -74,8 +74,14 @@ else
   UPDATE_TIME="${UPDATE_TIME:-04:00}"
 fi
 
+# Auto-generate 32-byte hexadecimal encryption and JWT secrets for Arcane if not predefined
+ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+
 # Write/Update master .env
 mkdir -p "${DATA_DIR}/arcane"
+chmod 777 "${DATA_DIR}/arcane" 2>/dev/null || true
+
 cat << EOF > "${ENV_FILE}"
 NODE_ROLE=MASTER
 NODE_NAME=${TS_HOSTNAME}
@@ -85,6 +91,8 @@ TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+JWT_SECRET=${JWT_SECRET}
 ALLOW_CLI_PASSWORD_RESET=true
 SHARED_NETWORK=${SHARED_NETWORK}
 SWARM_NETWORK=${SWARM_NETWORK}

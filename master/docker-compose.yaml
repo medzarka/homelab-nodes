@@ -35,6 +35,8 @@ services:
     restart: unless-stopped
     environment:
       - APP_URL=${ARCANE_APP_URL:-http://localhost:3552}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-}
       - ALLOW_CLI_PASSWORD_RESET=${ALLOW_CLI_PASSWORD_RESET:-true}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -42,7 +44,7 @@ services:
       - "${ARCANE_PORT:-3552}:3552"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${DATA_DIR:-/srv/data}/arcane:/app/data
+      - ${DATA_DIR:-/srv/data}/arcane:/app/data:z
     networks:
       - shared_net
       - homelab_swarm_net
