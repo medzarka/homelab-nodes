@@ -70,7 +70,8 @@ A unified, hardened, and automated node initialization suite designed to bootstr
 ```
 homelab-nodes/
 ├── README.md                           # Documentation & operations guide
-├── .env.example                        # Template environment variables
+├── .env.example                        # Template environment variables (NODE_ROLE=MASTER/WORKER)
+├── setup.sh                            # 🌟 Unified bootstrap orchestrator (dispatches based on NODE_ROLE)
 ├── setup-master.sh                     # Master Node bootstrap & hardening script
 ├── setup-worker.sh                     # Worker Node bootstrap & hardening script
 ├── worker-deeper-optimized.sh          # Deeply optimized Worker Node setup (High-I/O / Proxmox / Compute)
@@ -84,10 +85,10 @@ homelab-nodes/
 │   ├── 05-configure-firewalld.sh       # Firewalld reset, public rules & trusted tailscale0
 │   └── 06-storage-optimizations.sh     # Deep disk I/O, udev scheduler, sysctl anti-freeze & RAM-disk
 ├── master/
-│   ├── .env.example                    # Master environment variables
+│   ├── .env.example                    # Master environment variables (NODE_ROLE=MASTER)
 │   └── docker-compose.yaml             # Tailscale + Arcane Manager stack
 └── worker/
-    ├── .env.example                    # Worker environment variables
+    ├── .env.example                    # Worker environment variables (NODE_ROLE=WORKER)
     └── docker-compose.yaml             # Tailscale + Arcane Agent stack
 ```
 
@@ -95,32 +96,37 @@ homelab-nodes/
 
 ## 🚀 Quick Start Guide
 
-### 🅰️ Setting Up the Master Node (Primary Leader)
+### 🌟 Unified Bootstrapper (`setup.sh`)
 
-Run on your designated Master VPS / Server:
+Simply configure `.env` (or let the interactive prompt guide you) and run:
 
+```bash
+cd homelab-nodes
+cp .env.example .env
+# Edit .env and set NODE_ROLE (MASTER, WORKER, or WORKER_DEEPER_OPTIMIZED)
+sudo ./setup.sh
+```
+
+`setup.sh` will automatically evaluate `NODE_ROLE`, execute the respective provisioning and hardening script, and deploy the appropriate Docker Compose stack (`master` or `worker`).
+
+---
+
+### Direct Script Execution
+
+#### 🅰️ Setting Up the Master Node (Primary Leader)
 ```bash
 cd homelab-nodes
 sudo ./setup-master.sh
 ```
 
----
-
-### 🅱️ Setting Up a Standard Worker Node (Compute / Edge / VPS)
-
-Run on standard worker machines:
-
+#### 🅱️ Setting Up a Standard Worker Node (Compute / Edge / VPS)
 ```bash
 cd homelab-nodes
 sudo ./setup-worker.sh
 ```
 
----
-
-### 🅲 Setting Up a Deeper Optimized Worker Node (`worker-deeper-optimized.sh`)
-
+#### 🅲 Setting Up a Deeper Optimized Worker Node
 Run on dedicated hardware, Proxmox nodes, compute nodes (Ollama, AI models, heavy databases), or machines with DRAM-less SSDs:
-
 ```bash
 cd homelab-nodes
 sudo ./worker-deeper-optimized.sh

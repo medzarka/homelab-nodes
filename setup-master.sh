@@ -32,6 +32,12 @@ print_system_info
 MASTER_DIR="${SCRIPT_DIR}/master"
 ENV_FILE="${MASTER_DIR}/.env"
 
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+  echo "Loading global configuration from ${SCRIPT_DIR}/.env..."
+  # shellcheck disable=SC1090
+  source "${SCRIPT_DIR}/.env"
+fi
+
 if [ -f "${ENV_FILE}" ]; then
   echo "Loading existing configuration from ${ENV_FILE}..."
   # shellcheck disable=SC1090
@@ -39,7 +45,7 @@ if [ -f "${ENV_FILE}" ]; then
 fi
 
 # Fallback interactive inputs if not predefined
-if [ -t 0 ] && [ ! -f "${ENV_FILE}" ]; then
+if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/.env" ]; then
   read -r -p "Enter Node / Tailscale Hostname [default: $(hostname)]: " INPUT_NAME
   TS_HOSTNAME="${INPUT_NAME:-$(hostname)}"
 
@@ -70,6 +76,7 @@ fi
 # Write/Update master .env
 mkdir -p "${DATA_DIR}/arcane"
 cat << EOF > "${ENV_FILE}"
+NODE_ROLE=MASTER
 NODE_NAME=${TS_HOSTNAME}
 TS_HOSTNAME=${TS_HOSTNAME}
 TS_AUTHKEY=${TS_AUTHKEY}

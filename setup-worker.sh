@@ -32,6 +32,12 @@ print_system_info
 WORKER_DIR="${SCRIPT_DIR}/worker"
 ENV_FILE="${WORKER_DIR}/.env"
 
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+  echo "Loading global configuration from ${SCRIPT_DIR}/.env..."
+  # shellcheck disable=SC1090
+  source "${SCRIPT_DIR}/.env"
+fi
+
 if [ -f "${ENV_FILE}" ]; then
   echo "Loading existing configuration from ${ENV_FILE}..."
   # shellcheck disable=SC1090
@@ -39,7 +45,7 @@ if [ -f "${ENV_FILE}" ]; then
 fi
 
 # Fallback interactive inputs if not predefined
-if [ -t 0 ] && [ ! -f "${ENV_FILE}" ]; then
+if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/.env" ]; then
   read -r -p "Enter Node / Tailscale Hostname [default: $(hostname)]: " INPUT_NAME
   TS_HOSTNAME="${INPUT_NAME:-$(hostname)}"
 
@@ -59,6 +65,8 @@ if [ -t 0 ] && [ ! -f "${ENV_FILE}" ]; then
 else
   TS_HOSTNAME="${TS_HOSTNAME:-$(hostname)}"
   TS_AUTHKEY="${TS_AUTHKEY:-}"
+  SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
+  SWARM_NETWORK="${SWARM_NETWORK:-homelab_swarm_net}"
   MASTER_TAILSCALE_IP="${MASTER_TAILSCALE_IP:-}"
   ARCANE_AGENT_TOKEN="${ARCANE_AGENT_TOKEN:-}"
   SWARM_WORKER_TOKEN="${SWARM_WORKER_TOKEN:-}"
@@ -68,10 +76,13 @@ fi
 
 # Write/Update worker .env
 cat << EOF > "${ENV_FILE}"
+NODE_ROLE=WORKER
 NODE_NAME=${TS_HOSTNAME}
 TS_HOSTNAME=${TS_HOSTNAME}
 TS_AUTHKEY=${TS_AUTHKEY}
 TS_EXTRA_ARGS=--reset
+SHARED_NETWORK=${SHARED_NETWORK}
+SWARM_NETWORK=${SWARM_NETWORK}
 MASTER_TAILSCALE_IP=${MASTER_TAILSCALE_IP}
 ARCANE_SERVER_URL=http://${MASTER_TAILSCALE_IP}:3552
 ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN}
