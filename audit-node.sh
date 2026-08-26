@@ -313,10 +313,10 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
       fail "Arcane Manager container is NOT running!"
     fi
   else
-    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^arcane-agent$"; then
-      pass "Arcane Agent container is running."
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -qE "^(arcane-edge-agent|arcane-agent)$"; then
+      pass "Arcane Edge Agent container is running."
     else
-      fail "Arcane Agent container is NOT running!"
+      fail "Arcane Edge Agent container is NOT running!"
     fi
   fi
 fi

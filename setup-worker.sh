@@ -146,10 +146,13 @@ if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
   docker rm -f tailscale 2>/dev/null || true
 fi
 
-if docker ps -a --format '{{.Names}}' | grep -q "^arcane-agent$"; then
-  echo "Recreating existing 'arcane-agent' container..."
-  docker rm -f arcane-agent 2>/dev/null || true
-fi
+# Clean up any legacy or existing agent container
+docker rm -f arcane-agent arcane-edge-agent 2>/dev/null || true
+
+# Prepare persistent agent directory
+DATA_DIR="${DATA_DIR:-/srv/data}"
+mkdir -p "${DATA_DIR}/arcane-agent"
+chmod 777 "${DATA_DIR}/arcane-agent" 2>/dev/null || true
 
 docker compose up -d --remove-orphans
 
@@ -180,10 +183,11 @@ fi
 # ------------------------------------------------------------------------------
 # 7. Join Docker Swarm Cluster (Binding to Tailscale Mesh IP)
 # ------------------------------------------------------------------------------
-echo "===> [Docker Swarm] Checking Swarm Cluster Status..."
-SWARM_STATE="$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo 'inactive')"
+echo "===> [Docker Swarm] Configuring Swarm Cluster Membership..."
+if [ -n "${SWARM_WORKER_TOKEN}" ] && [ -n "${MASTER_TAILSCALE_IP}" ]; then
+  # Leave any previous/stale Swarm cluster to ensure clean join
+  docker swarm leave --force 2>/dev/null || true
 
-if [ "$SWARM_STATE" = "inactive" ] && [ -n "${SWARM_WORKER_TOKEN}" ] && [ -n "${MASTER_TAILSCALE_IP}" ]; then
   echo "Joining Docker Swarm cluster at ${MASTER_TAILSCALE_IP}:2377..."
   if [ -n "$WORKER_TS_IP" ] && [ "$WORKER_TS_IP" != "127.0.0.1" ]; then
     docker swarm join \
@@ -196,8 +200,6 @@ if [ "$SWARM_STATE" = "inactive" ] && [ -n "${SWARM_WORKER_TOKEN}" ] && [ -n "${
       --token "${SWARM_WORKER_TOKEN}" \
       "${MASTER_TAILSCALE_IP}:2377" || true
   fi
-elif [ "$SWARM_STATE" = "active" ]; then
-  echo "Docker Swarm is already active on this node."
 else
   echo "Swarm token not provided. You can join the Swarm later with:"
   echo "  sudo docker swarm join --token <TOKEN> --advertise-addr ${WORKER_TS_IP} --data-path-addr ${WORKER_TS_IP} ${MASTER_TAILSCALE_IP:-<MASTER_TS_IP>}:2377"

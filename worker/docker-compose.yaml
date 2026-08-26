@@ -27,24 +27,20 @@ services:
         max-file: "3"
 
   # ============================================================================
-  # 🤖 Arcane Agent (Worker Telemetry & Remote Container Orchestration)
+  # 🤖 Arcane Edge Agent (Outbound Polling Telemetry & Remote Orchestration)
   # ============================================================================
-  arcane-agent:
-    image: ghcr.io/getarcaneapp/arcane-headless:latest
-    container_name: arcane-agent
+  arcane-edge-agent:
+    image: ghcr.io/getarcaneapp/agent:latest
+    container_name: arcane-edge-agent
     restart: unless-stopped
     environment:
-      - AGENT_MODE=true
+      - EDGE_AGENT=true
+      - EDGE_TRANSPORT=poll
       - AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
-      - ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
       - MANAGER_API_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
-      - SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
-      - ARCANE_SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
-      - AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
-      - ARCANE_AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    network_mode: host
+      - ${DATA_DIR:-/srv/data}/arcane-agent:/app/data:z
     logging:
       driver: "json-file"
       options:
