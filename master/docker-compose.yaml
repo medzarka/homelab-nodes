@@ -1,0 +1,50 @@
+services:
+  # ============================================================================
+  # 🔒 Tailscale VPN Mesh Client (Host Networking + Tun Device)
+  # ============================================================================
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${TS_HOSTNAME:-zap-vps}
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_NETFILTER_MODE=nodivert
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---reset --hostname=${TS_HOSTNAME:-zap-vps}}
+    volumes:
+      - /var/lib/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: host
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # 🧙 Arcane Manager (Centralized Multi-Node GUI & GitOps Orchestrator)
+  # ============================================================================
+  arcane:
+    image: ghcr.io/getarcaneapp/arcane:latest
+    container_name: arcane
+    restart: unless-stopped
+    environment:
+      - APP_URL=${ARCANE_APP_URL:-http://localhost:3552}
+      - ALLOW_CLI_PASSWORD_RESET=${ALLOW_CLI_PASSWORD_RESET:-true}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      - "${ARCANE_PORT:-3552}:3552"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_DIR:-/srv/data}/arcane:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

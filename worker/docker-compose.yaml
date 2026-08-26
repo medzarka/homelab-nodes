@@ -1,0 +1,50 @@
+services:
+  # ============================================================================
+  # 🔒 Tailscale VPN Mesh Client (Host Networking + Tun Device)
+  # ============================================================================
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${TS_HOSTNAME:-worker-node}
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_NETFILTER_MODE=nodivert
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---reset --hostname=${TS_HOSTNAME:-worker-node}}
+    volumes:
+      - /var/lib/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: host
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # 🤖 Arcane Agent (Worker Telemetry & Remote Container Orchestration)
+  # ============================================================================
+  arcane-agent:
+    image: ghcr.io/getarcaneapp/arcane-agent:latest
+    container_name: arcane-agent
+    restart: unless-stopped
+    environment:
+      - SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
+      - ARCANE_SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
+      - AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
+      - ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
+      - AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
+      - ARCANE_AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

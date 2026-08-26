@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Homelab Node Framework — Master Node Initializer & Hardener
+# ==============================================================================
+# Automates the entire bootstrap lifecycle for a Homelab Master Node:
+# 1. OS & Architecture Detection (Debian/Ubuntu/Oracle Linux on ARM64/AMD64)
+# 2. 7-Day Host Log Retention Configuration (systemd-journald)
+# 3. Weekly Automated Package Updates & Scheduled Reboot (systemd-timer)
+# 4. Firewalld Lockdown (Master: Ports 22, 80, 443 only + Trusted tailscale0)
+# 5. Production Docker CE Installation with "iptables": false Hardening
+# 6. Tailscale VPN Mesh + Arcane Cockpit Manager Stack Deployment
+# 7. Docker Swarm Cluster Initialization over Tailscale Mesh
+# ==============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/common/01-detect-os.sh"
+
+ensure_root
+
+echo "===================================================================="
+echo "          🚀 HOMELAB MASTER NODE INITIALIZER & HARDENER            "
+echo "===================================================================="
+print_system_info
+
+# ------------------------------------------------------------------------------
+# 1. Load or Prompt Configuration Parameters
+# ------------------------------------------------------------------------------
+MASTER_DIR="${SCRIPT_DIR}/master"
+ENV_FILE="${MASTER_DIR}/.env"
+
+if [ -f "${ENV_FILE}" ]; then
+  echo "Loading existing configuration from ${ENV_FILE}..."
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+fi
+
+# Fallback interactive inputs if not predefined
+if [ -t 0 ] && [ ! -f "${ENV_FILE}" ]; then
+  read -r -p "Enter Node / Tailscale Hostname [default: $(hostname)]: " INPUT_NAME
+  TS_HOSTNAME="${INPUT_NAME:-$(hostname)}"
+
+  read -r -p "Enter Tailscale Auth Key (optional, press ENTER to authenticate via URL): " TS_AUTHKEY
+
+  read -r -p "Enter Persistent Data Root Directory [default: /srv/data]: " INPUT_DATA
+  DATA_DIR="${INPUT_DATA:-/srv/data}"
+
+  read -r -p "Enter Arcane Web UI Port [default: 3552]: " INPUT_PORT
+  ARCANE_PORT="${INPUT_PORT:-3552}"
+
+  read -r -p "Enter Weekly Maintenance Day (e.g. Sun, Mon) [default: Sun]: " INPUT_DAY
+  UPDATE_DAY="${INPUT_DAY:-Sun}"
+
+  read -r -p "Enter Weekly Maintenance Time (HH:MM) [default: 04:00]: " INPUT_TIME
+  UPDATE_TIME="${INPUT_TIME:-04:00}"
+else
+  TS_HOSTNAME="${TS_HOSTNAME:-$(hostname)}"
+  TS_AUTHKEY="${TS_AUTHKEY:-}"
+  DATA_DIR="${DATA_DIR:-/srv/data}"
+  ARCANE_PORT="${ARCANE_PORT:-3552}"
+  UPDATE_DAY="${UPDATE_DAY:-Sun}"
+  UPDATE_TIME="${UPDATE_TIME:-04:00}"
+fi
+
+# Write/Update master .env
+mkdir -p "${DATA_DIR}/arcane"
+cat << EOF > "${ENV_FILE}"
+NODE_NAME=${TS_HOSTNAME}
+TS_HOSTNAME=${TS_HOSTNAME}
+TS_AUTHKEY=${TS_AUTHKEY}
+TS_EXTRA_ARGS=--reset
+DATA_DIR=${DATA_DIR}
+ARCANE_PORT=${ARCANE_PORT}
+ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
+ALLOW_CLI_PASSWORD_RESET=true
+PUID=1000
+PGID=1000
+UPDATE_DAY=${UPDATE_DAY}
+UPDATE_TIME=${UPDATE_TIME}
+EOF
+
+# ------------------------------------------------------------------------------
+# 2. Configure Host 7-Day Log Retention
+# ------------------------------------------------------------------------------
+bash "${SCRIPT_DIR}/common/02-configure-logs.sh"
+
+# ------------------------------------------------------------------------------
+# 3. Configure Weekly Auto-Update & Reboot Schedule
+# ------------------------------------------------------------------------------
+bash "${SCRIPT_DIR}/common/03-configure-updates.sh" "${UPDATE_DAY}" "${UPDATE_TIME}"
+
+# ------------------------------------------------------------------------------
+# 4. Install & Harden Firewalld (Master: 22, 80, 443 + trusted tailscale0)
+# ------------------------------------------------------------------------------
+bash "${SCRIPT_DIR}/common/05-configure-firewalld.sh" "master"
+
+# ------------------------------------------------------------------------------
+# 5. Install & Harden Docker CE ("iptables": false)
+# ------------------------------------------------------------------------------
+bash "${SCRIPT_DIR}/common/04-install-docker.sh"
+
+# ------------------------------------------------------------------------------
+# 6. Deploy Master Compose Stack (Tailscale + Arcane Manager)
+# ------------------------------------------------------------------------------
+echo "===> [Master Stack] Launching Tailscale & Arcane Manager..."
+cd "${MASTER_DIR}"
+docker compose up -d --remove-orphans
+
+# Check for Tailscale Authentication
+echo "Waiting for Tailscale interface initialization..."
+sleep 5
+
+TS_IP=""
+for i in {1..12}; do
+  TS_IP="$(docker exec tailscale tailscale ip -4 2>/dev/null || true)"
+  if [ -n "${TS_IP}" ]; then
+    break
+  fi
+  echo "Checking Tailscale status ($i/12)..."
+  sleep 3
+done
+
+if [ -z "${TS_IP}" ]; then
+  echo ""
+  echo "⚠️ Tailscale is running but requires interactive login."
+  echo "👉 Run: docker exec -it tailscale tailscale up"
+  echo "Follow the displayed URL to authenticate this Master node to your Tailscale network."
+  echo ""
+  read -r -p "Press [ENTER] once Tailscale authentication is complete to continue..."
+  TS_IP="$(docker exec tailscale tailscale ip -4 2>/dev/null || echo '127.0.0.1')"
+fi
+
+# ------------------------------------------------------------------------------
+# 7. Initialize Docker Swarm on Master (Binding to Tailscale Mesh IP)
+# ------------------------------------------------------------------------------
+echo "===> [Docker Swarm] Checking Swarm Cluster Status..."
+SWARM_STATE="$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo 'inactive')"
+
+if [ "$SWARM_STATE" = "inactive" ]; then
+  if [ -n "$TS_IP" ] && [ "$TS_IP" != "127.0.0.1" ]; then
+    echo "Initializing Docker Swarm Leader on Tailscale IP (${TS_IP})..."
+    docker swarm init --advertise-addr "${TS_IP}" --data-path-addr "${TS_IP}"
+  else
+    echo "Initializing Docker Swarm Leader on default interface..."
+    docker swarm init
+  fi
+else
+  echo "Docker Swarm is already active on this node (State: ${SWARM_STATE})."
+fi
+
+# Create encrypted overlay network if missing
+if ! docker network ls --format '{{.Name}}' | grep -q "^homelab_swarm_net$"; then
+  echo "Creating encrypted multi-host overlay network 'homelab_swarm_net'..."
+  docker network create \
+    --driver overlay \
+    --attachable \
+    --opt encrypted \
+    homelab_swarm_net 2>/dev/null || true
+fi
+
+# Retrieve Swarm Join Tokens
+WORKER_JOIN_TOKEN="$(docker swarm join-token -q worker 2>/dev/null || echo 'N/A')"
+MANAGER_JOIN_TOKEN="$(docker swarm join-token -q manager 2>/dev/null || echo 'N/A')"
+
+# ------------------------------------------------------------------------------
+# 8. Completion Summary & Onboarding Next Steps
+# ------------------------------------------------------------------------------
+echo ""
+echo "===================================================================="
+echo "🎉 MASTER NODE SETUP & HARDENING COMPLETED SUCCESSFULLY!"
+echo "===================================================================="
+echo " 🌐 Tailscale Mesh IP:     ${TS_IP}"
+echo " 🧙 Arcane Cockpit URL:    http://${TS_IP}:${ARCANE_PORT} (or http://localhost:${ARCANE_PORT})"
+echo " 🔑 Default Arcane Login:  User: arcane | Pass: arcane-admin"
+echo ""
+echo " 🛡️ Firewall Security:"
+echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS)"
+echo "   • Tailscale Mesh: 100% Trusted for inter-node communication"
+echo ""
+echo " 🐝 Swarm Worker Join Command (Run on Worker nodes):"
+echo "--------------------------------------------------------------------"
+echo " docker swarm join --token ${WORKER_JOIN_TOKEN} --advertise-addr <WORKER_TS_IP> --data-path-addr <WORKER_TS_IP> ${TS_IP}:2377"
+echo "--------------------------------------------------------------------"
+echo ""
+echo " 🔍 To audit this host configuration at any time, run:"
+echo "    sudo ./audit-node.sh --role master"
+echo "===================================================================="
