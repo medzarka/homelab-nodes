@@ -148,18 +148,41 @@ sudo ./worker-deeper-optimized.sh
 
 When `setup-master.sh` finishes initializing the Master node, it automatically generates a ready-to-use **`worker-join.env`** configuration containing the Master's Tailscale mesh IP, Arcane URL, Swarm join token, and overlay network definitions.
 
-**To deploy any Worker node with zero manual configuration:**
-1. Log into your Arcane Cockpit UI (`http://<master-ip>:3552`) $\rightarrow$ **Nodes** $\rightarrow$ **Add Node** and copy the Agent Token into `worker-join.env`.
-2. Copy `worker-join.env` directly to the worker machine as `.env`:
-   ```bash
-   scp worker-join.env user@worker-machine:~/homelab-nodes/.env
-   ```
-3. SSH into the worker machine and run:
-   ```bash
-   cd homelab-nodes
-   sudo ./setup.sh
-   ```
-   The worker will automatically detect the configuration, harden the system, connect to Tailscale, join Docker Swarm, and start the Arcane Agent!
+#### 🧙 Method 1: Connecting a Worker Node to Arcane via Web UI (Recommended)
+
+To connect any Worker node to Arcane as an **Edge Agent** via the Web UI:
+
+1. **Access Arcane Cockpit on the Master Node**:
+   Open your browser and navigate to:
+   👉 **`http://<MASTER_TAILSCALE_IP>:3552`** (or `http://100.x.y.z:3552`)
+   *(Default Login — Username: `arcane` | Password: `arcane-admin`)*
+
+2. **Generate the Agent Token**:
+   - In the left sidebar, click **Environments** (or **Nodes**).
+   - Click the **`+ Add Environment`** button (top right).
+   - Select **Edge Agent** (Polling transport mode).
+   - Enter your Worker node's name (e.g., `zap-srv` or `oci01-flex`).
+   - Click **Generate Configuration** to display your unique **`AGENT_TOKEN`**.
+
+3. **Deploy the Worker Node**:
+   - Copy `worker-join.env` from the Master to the Worker as `.env`:
+     ```bash
+     scp worker-join.env user@worker-machine:~/homelab-nodes/.env
+     ```
+   - On the Worker machine, edit `.env` (or `worker/.env`) and paste the token:
+     ```ini
+     ARCANE_AGENT_TOKEN=<PASTE_GENERATED_AGENT_TOKEN_HERE>
+     ```
+   - Run the bootstrapper:
+     ```bash
+     cd homelab-nodes
+     sudo ./setup.sh
+     ```
+   - *(If running interactively without a pre-filled file, `./setup.sh` will prompt for the **Arcane Agent Token** directly).*
+
+4. **Verify in Arcane UI**:
+   - In Arcane Dashboard, your Worker node will transition to **🟢 Online**.
+   - You can now monitor containers, inspect logs, and manage workloads across all nodes from one central cockpit.
 
 ---
 
@@ -247,8 +270,6 @@ sudo ./audit-node.sh --role worker
 ```json
 {
   "iptables": false,
-  "live-restore": true,
-  "userland-proxy": false,
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
