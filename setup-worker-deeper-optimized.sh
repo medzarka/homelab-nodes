@@ -142,6 +142,15 @@ fi
 echo "===> [Worker Stack] Launching Tailscale & Arcane Agent..."
 cd "${WORKER_DIR}"
 
+# Stop any host-level tailscaled service to prevent /dev/net/tun conflicts
+if systemctl is-active --quiet tailscaled 2>/dev/null; then
+  echo "Stopping and disabling host-level tailscaled service (migrating to container)..."
+  systemctl stop tailscaled 2>/dev/null || true
+  systemctl disable tailscaled 2>/dev/null || true
+  pkill -9 tailscaled 2>/dev/null || true
+  ip link delete tailscale0 2>/dev/null || true
+fi
+
 if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
   echo "Recreating existing 'tailscale' container..."
   docker rm -f tailscale 2>/dev/null || true
