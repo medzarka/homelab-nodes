@@ -131,6 +131,17 @@ fi
 # ------------------------------------------------------------------------------
 echo "===> [Worker Stack] Launching Tailscale & Arcane Agent..."
 cd "${WORKER_DIR}"
+
+if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
+  echo "Recreating existing 'tailscale' container..."
+  docker rm -f tailscale 2>/dev/null || true
+fi
+
+if docker ps -a --format '{{.Names}}' | grep -q "^arcane-agent$"; then
+  echo "Recreating existing 'arcane-agent' container..."
+  docker rm -f arcane-agent 2>/dev/null || true
+fi
+
 docker compose up -d --remove-orphans
 
 # Check for Tailscale Authentication

@@ -121,11 +121,18 @@ if ! docker network ls --format '{{.Name}}' | grep -q "^${SHARED_NETWORK}$"; the
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Deploy Master Compose Stack (Tailscale + Arcane Manager)
+# 6. Launch Tailscale Mesh Container
 # ------------------------------------------------------------------------------
-echo "===> [Master Stack] Launching Tailscale & Arcane Manager..."
+echo "===> [Tailscale] Launching Tailscale VPN mesh container..."
 cd "${MASTER_DIR}"
-docker compose up -d --remove-orphans
+
+# Remove legacy/conflicting unmanaged container if present
+if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
+  echo "Recreating existing 'tailscale' container..."
+  docker rm -f tailscale 2>/dev/null || true
+fi
+
+docker compose up -d tailscale
 
 # Check for Tailscale Authentication
 echo "Waiting for Tailscale interface initialization..."
@@ -178,6 +185,17 @@ if ! docker network ls --format '{{.Name}}' | grep -q "^${SWARM_NETWORK}$"; then
     --opt encrypted \
     "${SWARM_NETWORK}" 2>/dev/null || true
 fi
+
+# ------------------------------------------------------------------------------
+# 8. Deploy Arcane Manager Cockpit
+# ------------------------------------------------------------------------------
+echo "===> [Master Stack] Launching Arcane Manager Cockpit..."
+if docker ps -a --format '{{.Names}}' | grep -q "^arcane$"; then
+  echo "Recreating existing 'arcane' container..."
+  docker rm -f arcane 2>/dev/null || true
+fi
+
+docker compose up -d --remove-orphans
 
 # Retrieve Swarm Join Tokens
 WORKER_JOIN_TOKEN="$(docker swarm join-token -q worker 2>/dev/null || echo 'N/A')"
