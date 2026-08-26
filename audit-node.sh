@@ -217,11 +217,20 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
       pass "Docker Swarm is ACTIVE (Role: Worker Node)."
     fi
 
-    # Check homelab_swarm_net
-    if docker network ls --format '{{.Name}}' 2>/dev/null | grep -q "^homelab_swarm_net$"; then
-      pass "Overlay network 'homelab_swarm_net' is available."
+    # Check Swarm Overlay Network
+    SWARM_NET="${SWARM_NETWORK:-homelab_swarm_net}"
+    if docker network ls --format '{{.Name}}' 2>/dev/null | grep -q "^${SWARM_NET}$"; then
+      pass "Attachable overlay network '${SWARM_NET}' is active and ready."
     else
-      info "Overlay network 'homelab_swarm_net' not found on this node yet."
+      info "Overlay network '${SWARM_NET}' not found on this node yet (created when stacks attach)."
+    fi
+
+    # Check Local Shared Bridge Network
+    SHARED_NET="${SHARED_NETWORK:-shared_net}"
+    if docker network ls --format '{{.Name}}' 2>/dev/null | grep -q "^${SHARED_NET}$"; then
+      pass "Shared bridge network '${SHARED_NET}' is active."
+    else
+      warn "Shared bridge network '${SHARED_NET}' not found. Run 'docker network create ${SHARED_NET}'."
     fi
   else
     warn "Docker Swarm is INACTIVE on this node."

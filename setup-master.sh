@@ -61,6 +61,8 @@ else
   TS_AUTHKEY="${TS_AUTHKEY:-}"
   DATA_DIR="${DATA_DIR:-/srv/data}"
   ARCANE_PORT="${ARCANE_PORT:-3552}"
+  SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
+  SWARM_NETWORK="${SWARM_NETWORK:-homelab_swarm_net}"
   UPDATE_DAY="${UPDATE_DAY:-Sun}"
   UPDATE_TIME="${UPDATE_TIME:-04:00}"
 fi
@@ -76,6 +78,8 @@ DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
 ALLOW_CLI_PASSWORD_RESET=true
+SHARED_NETWORK=${SHARED_NETWORK}
+SWARM_NETWORK=${SWARM_NETWORK}
 PUID=1000
 PGID=1000
 UPDATE_DAY=${UPDATE_DAY}
@@ -101,6 +105,12 @@ bash "${SCRIPT_DIR}/common/05-configure-firewalld.sh" "master"
 # 5. Install & Harden Docker CE ("iptables": false)
 # ------------------------------------------------------------------------------
 bash "${SCRIPT_DIR}/common/04-install-docker.sh"
+
+# Ensure local shared bridge network exists before starting containers
+if ! docker network ls --format '{{.Name}}' | grep -q "^${SHARED_NETWORK}$"; then
+  echo "Creating shared bridge network '${SHARED_NETWORK}'..."
+  docker network create "${SHARED_NETWORK}" 2>/dev/null || true
+fi
 
 # ------------------------------------------------------------------------------
 # 6. Deploy Master Compose Stack (Tailscale + Arcane Manager)
@@ -151,14 +161,14 @@ else
   echo "Docker Swarm is already active on this node (State: ${SWARM_STATE})."
 fi
 
-# Create encrypted overlay network if missing
-if ! docker network ls --format '{{.Name}}' | grep -q "^homelab_swarm_net$"; then
-  echo "Creating encrypted multi-host overlay network 'homelab_swarm_net'..."
+# Create encrypted attachable overlay network if missing
+if ! docker network ls --format '{{.Name}}' | grep -q "^${SWARM_NETWORK}$"; then
+  echo "Creating encrypted attachable overlay network '${SWARM_NETWORK}'..."
   docker network create \
     --driver overlay \
     --attachable \
     --opt encrypted \
-    homelab_swarm_net 2>/dev/null || true
+    "${SWARM_NETWORK}" 2>/dev/null || true
 fi
 
 # Retrieve Swarm Join Tokens

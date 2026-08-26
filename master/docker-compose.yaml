@@ -43,8 +43,19 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_DIR:-/srv/data}/arcane:/app/data
+    networks:
+      - shared_net
+      - homelab_swarm_net
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  shared_net:
+    name: ${SHARED_NETWORK:-shared_net}
+    external: true
+  homelab_swarm_net:
+    name: ${SWARM_NETWORK:-homelab_swarm_net}
+    external: true

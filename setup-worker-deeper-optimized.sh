@@ -111,6 +111,13 @@ bash "${SCRIPT_DIR}/common/06-storage-optimizations.sh"
 # ------------------------------------------------------------------------------
 bash "${SCRIPT_DIR}/common/04-install-docker.sh"
 
+# Ensure local shared bridge network exists on worker
+SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
+if ! docker network ls --format '{{.Name}}' | grep -q "^${SHARED_NETWORK}$"; then
+  echo "Creating shared bridge network '${SHARED_NETWORK}'..."
+  docker network create "${SHARED_NETWORK}" 2>/dev/null || true
+fi
+
 # ------------------------------------------------------------------------------
 # 7. Deploy Worker Compose Stack (Tailscale + Arcane Agent)
 # ------------------------------------------------------------------------------
