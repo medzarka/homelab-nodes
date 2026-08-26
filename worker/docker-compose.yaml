@@ -30,14 +30,16 @@ services:
   # 🤖 Arcane Agent (Worker Telemetry & Remote Container Orchestration)
   # ============================================================================
   arcane-agent:
-    image: ghcr.io/getarcaneapp/arcane-agent:latest
+    image: ghcr.io/getarcaneapp/arcane-headless:latest
     container_name: arcane-agent
     restart: unless-stopped
     environment:
-      - SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
-      - ARCANE_SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
+      - AGENT_MODE=true
       - AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
       - ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
+      - MANAGER_API_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
+      - SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
+      - ARCANE_SERVER_URL=${ARCANE_SERVER_URL:-http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552}
       - AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
       - ARCANE_AGENT_NAME=${ARCANE_AGENT_NAME:-${TS_HOSTNAME:-worker-node}}
     volumes:

@@ -35,15 +35,15 @@ EOF
 udevadm control --reload-rules 2>/dev/null || true
 udevadm trigger --type=devices --action=change 2>/dev/null || true
 
-# Apply immediately to all existing block devices
+# Apply immediately to all existing block devices (if sysfs is writable)
 for disk_path in /sys/block/sd* /sys/block/nvme* /sys/block/vd*; do
   if [ -d "$disk_path" ]; then
     disk_name="$(basename "$disk_path")"
     echo "  -> Tuning /dev/${disk_name}..."
-    [ -f "${disk_path}/queue/scheduler" ] && echo "none" > "${disk_path}/queue/scheduler" 2>/dev/null || true
-    [ -f "${disk_path}/queue/read_ahead_kb" ] && echo "128" > "${disk_path}/queue/read_ahead_kb" 2>/dev/null || true
-    [ -f "${disk_path}/queue/rq_affinity" ] && echo "2" > "${disk_path}/queue/rq_affinity" 2>/dev/null || true
-    [ -f "${disk_path}/queue/nr_requests" ] && echo "64" > "${disk_path}/queue/nr_requests" 2>/dev/null || true
+    [ -w "${disk_path}/queue/scheduler" ] && echo "none" > "${disk_path}/queue/scheduler" 2>/dev/null || true
+    [ -w "${disk_path}/queue/read_ahead_kb" ] && echo "128" > "${disk_path}/queue/read_ahead_kb" 2>/dev/null || true
+    [ -w "${disk_path}/queue/rq_affinity" ] && echo "2" > "${disk_path}/queue/rq_affinity" 2>/dev/null || true
+    [ -w "${disk_path}/queue/nr_requests" ] && echo "64" > "${disk_path}/queue/nr_requests" 2>/dev/null || true
   fi
 done
 
@@ -67,8 +67,8 @@ vm.dirty_expire_centisecs = 500
 vm.swappiness = 1
 EOF
 
-# Apply sysctl settings
-sysctl -p "${SYSCTL_FILE}" >/dev/null
+# Apply sysctl settings (suppress errors if running inside an LXC/container guest)
+sysctl -p "${SYSCTL_FILE}" >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------------------------
 # 3. ZFS Kernel Module "Trickle-Write" Tuning (If ZFS is present)
@@ -142,5 +142,5 @@ fi
 chmod 1777 /mnt/ramdisk
 
 echo "✅ [Storage Optimization] Applied successfully!"
-echo "   • RAM-Disk: $(df -h /mnt/ramdisk | tail -1 | awk '{print $2, "total,", $4, "available"}')"
-echo "   • Sysctl:   vfs_cache_pressure=$(sysctl -n vm.vfs_cache_pressure), dirty_bytes=$(sysctl -n vm.dirty_bytes)"
+echo "   • RAM-Disk: $(df -h /mnt/ramdisk 2>/dev/null | tail -1 | awk '{print $2, "total,", $4, "available"}' || echo 'Mounted')"
+echo "   • Sysctl:   vfs_cache_pressure=$(sysctl -n vm.vfs_cache_pressure 2>/dev/null || echo 'default'), dirty_bytes=$(sysctl -n vm.dirty_bytes 2>/dev/null || echo 'default')"

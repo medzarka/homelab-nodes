@@ -53,6 +53,9 @@ if [ "$OS_FAMILY" = "debian_like" ]; then
     CODENAME="$(lsb_release -cs 2>/dev/null || echo 'stable')"
   fi
 
+  # Clean up duplicate legacy / deb822 docker sources if present
+  rm -f /etc/apt/sources.list.d/docker.sources 2>/dev/null || true
+
   echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${OS_ID} \
     ${CODENAME} stable" | \
