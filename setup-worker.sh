@@ -32,6 +32,12 @@ print_system_info
 WORKER_DIR="${SCRIPT_DIR}/worker"
 ENV_FILE="${WORKER_DIR}/.env"
 
+if [ -f "${SCRIPT_DIR}/worker-join.env" ]; then
+  echo "Loading master-generated configuration from ${SCRIPT_DIR}/worker-join.env..."
+  # shellcheck disable=SC1090
+  source "${SCRIPT_DIR}/worker-join.env"
+fi
+
 if [ -f "${SCRIPT_DIR}/.env" ]; then
   echo "Loading global configuration from ${SCRIPT_DIR}/.env..."
   # shellcheck disable=SC1090

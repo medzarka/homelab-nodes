@@ -26,6 +26,7 @@ print_system_info
 # 1. Load Environment Configuration
 # ------------------------------------------------------------------------------
 ROOT_ENV="${SCRIPT_DIR}/.env"
+WORKER_JOIN_ENV="${SCRIPT_DIR}/worker-join.env"
 MASTER_ENV="${SCRIPT_DIR}/master/.env"
 WORKER_ENV="${SCRIPT_DIR}/worker/.env"
 
@@ -33,6 +34,10 @@ if [ -f "${ROOT_ENV}" ]; then
   echo "Loading global configuration from ${ROOT_ENV}..."
   # shellcheck disable=SC1090
   source "${ROOT_ENV}"
+elif [ -f "${WORKER_JOIN_ENV}" ]; then
+  echo "Loading master-generated configuration from ${WORKER_JOIN_ENV}..."
+  # shellcheck disable=SC1090
+  source "${WORKER_JOIN_ENV}"
 elif [ -f "${MASTER_ENV}" ] && [ ! -f "${WORKER_ENV}" ]; then
   echo "Loading existing configuration from ${MASTER_ENV}..."
   # shellcheck disable=SC1090
