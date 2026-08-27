@@ -96,7 +96,19 @@ firewall-cmd --permanent --zone=trusted --add-source=fd7a:115c:a1e0::/48
 firewall-cmd --permanent --zone=trusted --remove-interface=docker0 2>/dev/null || true
 firewall-cmd --permanent --zone=trusted --remove-interface=docker_gwbridge 2>/dev/null || true
 
-# 5. Reload Firewalld configuration
+# 5. Harden Docker Forwarding Policy (Prevent public port exposure)
+echo "Hardening Docker forwarding policy..."
+firewall-cmd --permanent --policy docker-forwarding --remove-ingress-zone ANY 2>/dev/null || true
+firewall-cmd --permanent --policy docker-forwarding --add-ingress-zone public 2>/dev/null || true
+firewall-cmd --permanent --policy docker-forwarding --set-target REJECT 2>/dev/null || true
+
+if [ "$NODE_ROLE" = "master" ]; then
+  echo "Permitting HTTP/HTTPS forwarding to Docker on Master node (for Traefik)..."
+  firewall-cmd --permanent --policy docker-forwarding --add-port=80/tcp 2>/dev/null || true
+  firewall-cmd --permanent --policy docker-forwarding --add-port=443/tcp 2>/dev/null || true
+fi
+
+# 6. Reload Firewalld configuration
 echo "Reloading Firewalld to apply changes..."
 firewall-cmd --reload
 
