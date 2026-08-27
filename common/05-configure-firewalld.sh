@@ -118,7 +118,7 @@ if [ "${DOCKER_IPTABLES_HARDENING:-true}" = "true" ]; then
   
   # Master nodes allow HTTP/HTTPS (80,443) for Traefik ingress. Workers only allow internal traffic.
   if [ "$NODE_ROLE" = "master" ]; then
-    DOCKER_USER_RULES="iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j RETURN"
+    DOCKER_USER_RULES="iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j RETURN;"
   else
     DOCKER_USER_RULES=""
   fi
@@ -134,8 +134,8 @@ ReloadPropagatedFrom=firewalld.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStartPre=/bin/sleep 2
-ExecStart=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES}; iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
-ExecReload=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES}; iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
+ExecStart=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES} iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
+ExecReload=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES} iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
 
 [Install]
 WantedBy=multi-user.target docker.service
