@@ -154,7 +154,7 @@ DATA_DIR="${DATA_DIR:-/srv/data}"
 mkdir -p "${DATA_DIR}/arcane-agent"
 chmod 777 "${DATA_DIR}/arcane-agent" 2>/dev/null || true
 
-docker compose up -d --remove-orphans
+docker compose -f "${SCRIPT_DIR}/worker/docker-compose.yaml" up -d --remove-orphans
 
 # Check for Tailscale Authentication
 echo "Waiting for Tailscale interface initialization..."

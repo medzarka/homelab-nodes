@@ -147,7 +147,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
   docker rm -f tailscale 2>/dev/null || true
 fi
 
-docker compose up -d tailscale
+docker compose -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d tailscale
 
 # Check for Tailscale Authentication
 echo "Waiting for Tailscale interface initialization..."
@@ -210,7 +210,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^arcane$"; then
   docker rm -f arcane 2>/dev/null || true
 fi
 
-docker compose up -d --remove-orphans
+docker compose -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d --remove-orphans
 
 # Retrieve Swarm Join Tokens
 WORKER_JOIN_TOKEN="$(docker swarm join-token -q worker 2>/dev/null || echo 'N/A')"
