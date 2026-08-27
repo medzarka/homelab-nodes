@@ -87,7 +87,7 @@ mkdir -p /etc/docker
 # Note: "userland-proxy" must remain default (true) when "iptables": false to route published ports via Firewalld.
 cat << 'EOF' > /etc/docker/daemon.json
 {
-  "iptables": false,
+  "iptables": true,
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",

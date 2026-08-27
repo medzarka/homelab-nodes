@@ -193,11 +193,11 @@ fi
 
 # Create encrypted attachable overlay network if missing
 if ! docker network ls --format '{{.Name}}' | grep -q "^${SWARM_NETWORK}$"; then
-  echo "Creating encrypted attachable overlay network '${SWARM_NETWORK}'..."
+  echo "Creating attachable overlay network '${SWARM_NETWORK}' with MTU 1200..."
   docker network create \
     --driver overlay \
     --attachable \
-    --opt encrypted \
+    --opt com.docker.network.driver.mtu=1200 \
     "${SWARM_NETWORK}" 2>/dev/null || true
 fi
 
