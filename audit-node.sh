@@ -227,6 +227,16 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
     SWARM_NET="${SWARM_NETWORK:-homelab_swarm_net}"
     if docker network ls --format '{{.Name}}' 2>/dev/null | grep -q "^${SWARM_NET}$"; then
       pass "Attachable overlay network '${SWARM_NET}' is active and ready."
+      
+      NET_OPTS="$(docker network inspect ${SWARM_NET} --format '{{.Options}}' 2>/dev/null || echo '')"
+      if echo "$NET_OPTS" | grep -q "com.docker.network.driver.mtu:1200"; then
+        pass "Overlay network '${SWARM_NET}' MTU is correctly set to 1200 (Tailscale compatible)."
+      else
+        fail "Overlay network '${SWARM_NET}' MTU is NOT 1200! This will cause packet loss over Tailscale."
+      fi
+      if echo "$NET_OPTS" | grep -q "encrypted:"; then
+        fail "Overlay network '${SWARM_NET}' has IPsec encryption enabled! This clashes with Tailscale."
+      fi
     else
       info "Overlay network '${SWARM_NET}' not found on this node yet (created when stacks attach)."
     fi

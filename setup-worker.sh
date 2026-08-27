@@ -185,20 +185,25 @@ fi
 # ------------------------------------------------------------------------------
 echo "===> [Docker Swarm] Configuring Swarm Cluster Membership..."
 if [ -n "${SWARM_WORKER_TOKEN}" ] && [ -n "${MASTER_TAILSCALE_IP}" ]; then
-  # Leave any previous/stale Swarm cluster to ensure clean join
-  docker swarm leave --force 2>/dev/null || true
-
-  echo "Joining Docker Swarm cluster at ${MASTER_TAILSCALE_IP}:2377..."
-  if [ -n "$WORKER_TS_IP" ] && [ "$WORKER_TS_IP" != "127.0.0.1" ]; then
-    docker swarm join \
-      --token "${SWARM_WORKER_TOKEN}" \
-      --advertise-addr "${WORKER_TS_IP}" \
-      --data-path-addr "${WORKER_TS_IP}" \
-      "${MASTER_TAILSCALE_IP}:2377" || true
+  SWARM_STATE="$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo 'inactive')"
+  if [ "$SWARM_STATE" = "active" ]; then
+    echo "Docker Swarm is already active on this worker node. Skipping join."
   else
-    docker swarm join \
-      --token "${SWARM_WORKER_TOKEN}" \
-      "${MASTER_TAILSCALE_IP}:2377" || true
+    # Leave any previous/stale Swarm cluster to ensure clean join
+    docker swarm leave --force 2>/dev/null || true
+
+    echo "Joining Docker Swarm cluster at ${MASTER_TAILSCALE_IP}:2377..."
+    if [ -n "$WORKER_TS_IP" ] && [ "$WORKER_TS_IP" != "127.0.0.1" ]; then
+      docker swarm join \
+        --token "${SWARM_WORKER_TOKEN}" \
+        --advertise-addr "${WORKER_TS_IP}" \
+        --data-path-addr "${WORKER_TS_IP}" \
+        "${MASTER_TAILSCALE_IP}:2377" || true
+    else
+      docker swarm join \
+        --token "${SWARM_WORKER_TOKEN}" \
+        "${MASTER_TAILSCALE_IP}:2377" || true
+    fi
   fi
 else
   echo "Swarm token not provided. You can join the Swarm later with:"
