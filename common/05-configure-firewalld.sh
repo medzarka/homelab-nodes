@@ -108,6 +108,45 @@ if [ "$NODE_ROLE" = "master" ]; then
   firewall-cmd --permanent --policy docker-forwarding --add-port=443/tcp 2>/dev/null || true
 fi
 
+# 5.1 Deploy Docker Firewalld Hardening Systemd Service
+# This fixes the Docker vs Firewalld race condition: Docker bypasses nftables policies by injecting 
+# iptables FORWARD rules. If we use firewalld direct rules to secure DOCKER-USER, `firewall-cmd --reload` 
+# crashes because it flushes iptables, destroying the chain before loading the rules. 
+# This systemd service dynamically repopulates the chain safely on Docker restart or Firewalld reload.
+if [ "${DOCKER_IPTABLES_HARDENING:-true}" = "true" ]; then
+  echo "Deploying robust Docker Firewalld Hardening systemd service..."
+  
+  # Master nodes allow HTTP/HTTPS (80,443) for Traefik ingress. Workers only allow internal traffic.
+  if [ "$NODE_ROLE" = "master" ]; then
+    DOCKER_USER_RULES="iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j RETURN"
+  else
+    DOCKER_USER_RULES=""
+  fi
+
+  cat << EOF > /etc/systemd/system/docker-firewalld-hardening.service
+[Unit]
+Description=Docker Firewalld Hardening (DOCKER-USER rules)
+After=docker.service firewalld.service
+BindsTo=docker.service
+ReloadPropagatedFrom=firewalld.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/sleep 2
+ExecStart=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES}; iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
+ExecReload=/usr/bin/bash -c "iptables -F DOCKER-USER 2>/dev/null || true; iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN; iptables -A DOCKER-USER -i lo -j RETURN; iptables -A DOCKER-USER -i tailscale0 -j RETURN; iptables -A DOCKER-USER -i docker0 -j RETURN; iptables -A DOCKER-USER -i docker_gwbridge -j RETURN; iptables -A DOCKER-USER -i br-+ -j RETURN; ${DOCKER_USER_RULES}; iptables -A DOCKER-USER -j REJECT --reject-with icmp-port-unreachable"
+
+[Install]
+WantedBy=multi-user.target docker.service
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now docker-firewalld-hardening.service
+else
+  echo "DOCKER_IPTABLES_HARDENING is disabled. Skipping Docker iptables hardening."
+fi
+
 # 6. Reload Firewalld configuration
 echo "Reloading Firewalld to apply changes..."
 firewall-cmd --reload
