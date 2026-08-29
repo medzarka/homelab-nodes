@@ -77,6 +77,8 @@ else
   ARCANE_AGENT_TOKEN="${ARCANE_AGENT_TOKEN:-}"
   SWARM_WORKER_TOKEN="${SWARM_WORKER_TOKEN:-}"
   UPDATE_DAY="${UPDATE_DAY:-Sun}"
+  UPDATE_TIME="${UPDATE_TIME:-04:00}"
+fi
 # If .env does not exist, create it from worker-join.env, template or defaults
 if [ ! -f "${ENV_FILE}" ]; then
   if [ -f "${SCRIPT_DIR}/worker-join.env" ]; then
