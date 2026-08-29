@@ -30,22 +30,16 @@ print_system_info
 # 1. Load or Prompt Configuration Parameters
 # ------------------------------------------------------------------------------
 MASTER_DIR="${SCRIPT_DIR}/master"
-ENV_FILE="${MASTER_DIR}/.env"
-
-if [ -f "${SCRIPT_DIR}/.env" ]; then
-  echo "Loading global configuration from ${SCRIPT_DIR}/.env..."
-  # shellcheck disable=SC1090
-  source "${SCRIPT_DIR}/.env"
-fi
+ENV_FILE="${SCRIPT_DIR}/.env"
 
 if [ -f "${ENV_FILE}" ]; then
-  echo "Loading existing configuration from ${ENV_FILE}..."
+  echo "Loading configuration from ${ENV_FILE}..."
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
 fi
 
 # Fallback interactive inputs if not predefined
-if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/.env" ]; then
+if [ -t 0 ] && [ ! -f "${ENV_FILE}" ]; then
   read -r -p "Enter Node / Tailscale Hostname [default: $(hostname)]: " INPUT_NAME
   TS_HOSTNAME="${INPUT_NAME:-$(hostname)}"
 
@@ -156,7 +150,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^tailscale$"; then
   docker rm -f tailscale 2>/dev/null || true
 fi
 
-docker compose -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d tailscale
+docker compose --env-file "${ENV_FILE}" -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d tailscale
 
 # Check for Tailscale Authentication
 echo "Waiting for Tailscale interface initialization..."
@@ -211,15 +205,15 @@ if ! docker network ls --format '{{.Name}}' | grep -q "^${SWARM_NETWORK}$"; then
 fi
 
 # ------------------------------------------------------------------------------
-# 8. Deploy Arcane Manager Cockpit
+# 8. Deploy Arcane Manager Cockpit & Bootstrap Proxy
 # ------------------------------------------------------------------------------
-echo "===> [Master Stack] Launching Arcane Manager Cockpit..."
+echo "===> [Master Stack] Launching Arcane Manager & Bootstrap Proxy..."
 if docker ps -a --format '{{.Names}}' | grep -q "^arcane$"; then
   echo "Recreating existing 'arcane' container..."
   docker rm -f arcane 2>/dev/null || true
 fi
 
-docker compose -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d --remove-orphans
+docker compose --env-file "${ENV_FILE}" -f "${SCRIPT_DIR}/master/docker-compose.yaml" up -d --remove-orphans
 
 # Retrieve Swarm Join Tokens
 WORKER_JOIN_TOKEN="$(docker swarm join-token -q worker 2>/dev/null || echo 'N/A')"
@@ -229,7 +223,6 @@ MANAGER_JOIN_TOKEN="$(docker swarm join-token -q manager 2>/dev/null || echo 'N/
 # 8. Auto-Generate Worker Onboarding Configuration (worker-join.env)
 # ------------------------------------------------------------------------------
 WORKER_JOIN_ENV="${SCRIPT_DIR}/worker-join.env"
-WORKER_LOCAL_ENV="${SCRIPT_DIR}/worker/.env"
 
 cat << EOF > "${WORKER_JOIN_ENV}"
 # ==============================================================================
@@ -261,11 +254,6 @@ ARCANE_AGENT_TOKEN=
 UPDATE_DAY=${UPDATE_DAY}
 UPDATE_TIME=${UPDATE_TIME}
 EOF
-
-# Also seed worker/.env if not present
-if [ ! -f "${WORKER_LOCAL_ENV}" ]; then
-  cp "${WORKER_JOIN_ENV}" "${WORKER_LOCAL_ENV}"
-fi
 
 # ------------------------------------------------------------------------------
 # 9. Completion Summary & Worker Onboarding Instructions

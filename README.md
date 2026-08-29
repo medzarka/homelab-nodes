@@ -99,11 +99,9 @@ homelab-nodes/
 │   ├── 05-configure-firewalld.sh       # Firewalld reset, public rules & trusted tailscale0
 │   └── 06-storage-optimizations.sh     # Deep disk I/O, udev scheduler, sysctl anti-freeze & RAM-disk
 ├── master/
-│   ├── .env.example                    # Master environment variables (NODE_ROLE=MASTER)
 │   ├── Caddyfile                       # Out-of-band bootstrap proxy config (Basic Auth + WebSockets)
 │   └── docker-compose.yaml             # Tailscale + Arcane Manager + Bootstrap Proxy stack
 └── worker/
-    ├── .env.example                    # Worker environment variables (NODE_ROLE=WORKER)
     └── docker-compose.yaml             # Tailscale + Arcane Agent stack
 ```
 
@@ -189,7 +187,7 @@ When `setup-master.sh` finishes initializing the Master node, it automatically g
      ```bash
      scp worker-join.env user@worker-machine:~/homelab-nodes/.env
      ```
-   - On the Worker machine, edit `.env` (or `worker/.env`) and paste the token:
+   - On the Worker machine, edit `.env` and paste the token:
      ```ini
      ARCANE_AGENT_TOKEN=<PASTE_GENERATED_AGENT_TOKEN_HERE>
      ```

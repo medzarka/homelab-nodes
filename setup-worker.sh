@@ -30,28 +30,22 @@ print_system_info
 # 1. Load or Prompt Configuration Parameters
 # ------------------------------------------------------------------------------
 WORKER_DIR="${SCRIPT_DIR}/worker"
-ENV_FILE="${WORKER_DIR}/.env"
+ENV_FILE="${SCRIPT_DIR}/.env"
 
-if [ -f "${SCRIPT_DIR}/worker-join.env" ]; then
+if [ -f "${SCRIPT_DIR}/worker-join.env" ] && [ ! -f "${ENV_FILE}" ]; then
   echo "Loading master-generated configuration from ${SCRIPT_DIR}/worker-join.env..."
   # shellcheck disable=SC1090
   source "${SCRIPT_DIR}/worker-join.env"
 fi
 
-if [ -f "${SCRIPT_DIR}/.env" ]; then
-  echo "Loading global configuration from ${SCRIPT_DIR}/.env..."
-  # shellcheck disable=SC1090
-  source "${SCRIPT_DIR}/.env"
-fi
-
 if [ -f "${ENV_FILE}" ]; then
-  echo "Loading existing configuration from ${ENV_FILE}..."
+  echo "Loading configuration from ${ENV_FILE}..."
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
 fi
 
 # Fallback interactive inputs if not predefined
-if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/.env" ]; then
+if [ -t 0 ] && [ ! -f "${ENV_FILE}" ] && [ ! -f "${SCRIPT_DIR}/worker-join.env" ]; then
   read -r -p "Enter Node / Tailscale Hostname [default: $(hostname)]: " INPUT_NAME
   TS_HOSTNAME="${INPUT_NAME:-$(hostname)}"
 
@@ -154,7 +148,7 @@ DATA_DIR="${DATA_DIR:-/srv/data}"
 mkdir -p "${DATA_DIR}/arcane-agent"
 chmod 777 "${DATA_DIR}/arcane-agent" 2>/dev/null || true
 
-docker compose -f "${SCRIPT_DIR}/worker/docker-compose.yaml" up -d --remove-orphans
+docker compose --env-file "${ENV_FILE}" -f "${SCRIPT_DIR}/worker/docker-compose.yaml" up -d --remove-orphans
 
 # Check for Tailscale Authentication
 echo "Waiting for Tailscale interface initialization..."
