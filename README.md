@@ -225,6 +225,7 @@ sudo ./audit-node.sh --role worker
 | `TS_HOSTNAME` | `master-node` | Tailscale machine hostname on your tailnet |
 | `TS_AUTHKEY` | *(empty)* | Optional non-interactive Tailscale authentication key |
 | `TS_EXTRA_ARGS` | `--reset --advertise-exit-node` | Arguments passed to `tailscale up` (Exit node enabled) |
+| `ROOT_DOMAIN` | `example.com` | Root apex domain used for Traefik ingress routes (e.g. `bluewave.work`) |
 | `SHARED_NETWORK` | `shared_net` | Local Docker bridge network name |
 | `SWARM_NETWORK` | `homelab_swarm_net` | Multi-host Docker Swarm attachable overlay network name |
 | `DATA_DIR` | `/srv/data` | Root directory for persistent data mounts |
