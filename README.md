@@ -229,9 +229,7 @@ sudo ./audit-node.sh --role worker
 | `SWARM_NETWORK` | `homelab_swarm_net` | Multi-host Docker Swarm attachable overlay network name |
 | `DATA_DIR` | `/srv/data` | Root directory for persistent data mounts |
 | `ARCANE_PORT` | `3552` | Internal host port for Arcane core container |
-| `ARCANE_ADMIN_USER` | `arcane` | Default admin username for Arcane web login |
-| `ARCANE_ADMIN_PASSWORD` | `arcane-admin` | Default admin password for Arcane web login |
-| `ARCANE_BOOTSTRAP_PORT` | `8005` | External public port for Caddy out-of-band bootstrap proxy |
+| `ARCANE_BOOTSTRAP_PORT` | `8005` | External public port for Caddy out-of-band bootstrap HTTPS proxy |
 | `ARCANE_PROXY_USER` | `admin` | HTTP Basic Auth username for bootstrap proxy |
 | `ARCANE_PROXY_PASSWORD` | `arcane-bootstrap-admin` | HTTP Basic Auth password for bootstrap proxy |
 | `ENCRYPTION_KEY` | *(auto-generated)* | 32-byte hex key for Arcane DB secret encryption |

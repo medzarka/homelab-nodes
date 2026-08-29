@@ -90,8 +90,6 @@ TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT:-3552}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT:-3552}
-ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER:-arcane}
-ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD:-arcane-admin}
 ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT:-8005}
 ARCANE_PROXY_USER=${ARCANE_PROXY_USER:-admin}
 ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD:-arcane-bootstrap-admin}
@@ -127,13 +125,7 @@ if [ -z "${JWT_SECRET:-}" ]; then
   fi
 fi
 
-# Ensure Arcane credentials and proxy variables exist in .env
-if ! grep -q "^ARCANE_ADMIN_USER=" "${ENV_FILE}"; then
-  echo "ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER:-arcane}" >> "${ENV_FILE}"
-fi
-if ! grep -q "^ARCANE_ADMIN_PASSWORD=" "${ENV_FILE}"; then
-  echo "ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD:-arcane-admin}" >> "${ENV_FILE}"
-fi
+# Ensure proxy variables exist in .env
 if ! grep -q "^ARCANE_BOOTSTRAP_PORT=" "${ENV_FILE}"; then
   echo "ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT:-8005}" >> "${ENV_FILE}"
 fi
@@ -309,11 +301,10 @@ echo "🎉 MASTER NODE SETUP & HARDENING COMPLETED SUCCESSFULLY!"
 echo "===================================================================="
 echo " 🌐 Tailscale Mesh IP:     ${TS_IP}"
 echo " 🧙 Arcane Tailscale URL:  http://${TS_IP}:${ARCANE_PORT} (or http://localhost:${ARCANE_PORT})"
-echo " 🔑 Arcane App Login:      User: ${ARCANE_ADMIN_USER} | Pass: ${ARCANE_ADMIN_PASSWORD}"
 echo ""
 echo " 🛡️ Arcane Bootstrap URL:  https://${PUBLIC_IP}:${ARCANE_BOOTSTRAP_PORT} (TLS Encrypted)"
-echo "    • Layer 1 (Proxy Auth): User: ${ARCANE_PROXY_USER} | Pass: ${ARCANE_PROXY_PASSWORD}"
-echo "    • Layer 2 (Arcane App): User: ${ARCANE_ADMIN_USER} | Pass: ${ARCANE_ADMIN_PASSWORD}"
+echo "    • HTTPS Proxy Auth:    User: ${ARCANE_PROXY_USER} | Pass: ${ARCANE_PROXY_PASSWORD}"
+echo "    • Arcane Cockpit:      Configure / Sign-in directly in web UI on first access"
 echo ""
 echo " 🛡️ Firewall Security:"
 echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS), ${ARCANE_BOOTSTRAP_PORT} (Bootstrap HTTPS Proxy)"
