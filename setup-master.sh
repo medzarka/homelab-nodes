@@ -67,47 +67,82 @@ else
   ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
   SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
   SWARM_NETWORK="${SWARM_NETWORK:-homelab_swarm_net}"
-  UPDATE_DAY="${UPDATE_DAY:-Sun}"
-  UPDATE_TIME="${UPDATE_TIME:-04:00}"
-fi
-
-# Auto-generate 32-byte hexadecimal encryption and JWT secrets for Arcane if not predefined
-ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
-JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
-ARCANE_ADMIN_USER="${ARCANE_ADMIN_USER:-arcane}"
-ARCANE_ADMIN_PASSWORD="${ARCANE_ADMIN_PASSWORD:-arcane-admin}"
-ARCANE_BOOTSTRAP_PORT="${ARCANE_BOOTSTRAP_PORT:-8005}"
-ARCANE_PROXY_USER="${ARCANE_PROXY_USER:-admin}"
-ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
-
-# Write/Update master .env
+# Ensure persistent data directory exists
+DATA_DIR="${DATA_DIR:-/srv/data}"
 mkdir -p "${DATA_DIR}/arcane"
 chmod 777 "${DATA_DIR}/arcane" 2>/dev/null || true
 
-cat << EOF > "${ENV_FILE}"
+# If .env does not exist, create it from template or defaults
+if [ ! -f "${ENV_FILE}" ]; then
+  if [ -f "${SCRIPT_DIR}/.env.example" ]; then
+    cp "${SCRIPT_DIR}/.env.example" "${ENV_FILE}"
+  else
+    cat << EOF > "${ENV_FILE}"
 NODE_ROLE=MASTER
-NODE_NAME=${TS_HOSTNAME}
-TS_HOSTNAME=${TS_HOSTNAME}
-TS_AUTHKEY=${TS_AUTHKEY}
+NODE_NAME=${TS_HOSTNAME:-master-node}
+TS_HOSTNAME=${TS_HOSTNAME:-master-node}
+TS_AUTHKEY=${TS_AUTHKEY:-}
 TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
-ARCANE_PORT=${ARCANE_PORT}
-ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
-ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER}
-ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD}
-ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT}
-ARCANE_PROXY_USER=${ARCANE_PROXY_USER}
-ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD}
-ENCRYPTION_KEY=${ENCRYPTION_KEY}
-JWT_SECRET=${JWT_SECRET}
+ARCANE_PORT=${ARCANE_PORT:-3552}
+ARCANE_APP_URL=http://localhost:${ARCANE_PORT:-3552}
+ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER:-arcane}
+ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD:-arcane-admin}
+ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT:-8005}
+ARCANE_PROXY_USER=${ARCANE_PROXY_USER:-admin}
+ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD:-arcane-bootstrap-admin}
+ENCRYPTION_KEY=
+JWT_SECRET=
 ALLOW_CLI_PASSWORD_RESET=true
-SHARED_NETWORK=${SHARED_NETWORK}
-SWARM_NETWORK=${SWARM_NETWORK}
+SHARED_NETWORK=${SHARED_NETWORK:-shared_net}
+SWARM_NETWORK=${SWARM_NETWORK:-homelab_swarm_net}
 PUID=1000
 PGID=1000
-UPDATE_DAY=${UPDATE_DAY}
-UPDATE_TIME=${UPDATE_TIME}
+UPDATE_DAY=${UPDATE_DAY:-Sun}
+UPDATE_TIME=${UPDATE_TIME:-04:00}
 EOF
+  fi
+fi
+
+# Ensure secrets are generated and set non-destructively in .env if empty
+if [ -z "${ENCRYPTION_KEY:-}" ]; then
+  ENCRYPTION_KEY="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  if grep -q "^ENCRYPTION_KEY=" "${ENV_FILE}"; then
+    sed -i.bak "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=${ENCRYPTION_KEY}|" "${ENV_FILE}" 2>/dev/null && rm -f "${ENV_FILE}.bak"
+  else
+    echo "ENCRYPTION_KEY=${ENCRYPTION_KEY}" >> "${ENV_FILE}"
+  fi
+fi
+
+if [ -z "${JWT_SECRET:-}" ]; then
+  JWT_SECRET="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  if grep -q "^JWT_SECRET=" "${ENV_FILE}"; then
+    sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" "${ENV_FILE}" 2>/dev/null && rm -f "${ENV_FILE}.bak"
+  else
+    echo "JWT_SECRET=${JWT_SECRET}" >> "${ENV_FILE}"
+  fi
+fi
+
+# Ensure Arcane credentials and proxy variables exist in .env
+if ! grep -q "^ARCANE_ADMIN_USER=" "${ENV_FILE}"; then
+  echo "ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER:-arcane}" >> "${ENV_FILE}"
+fi
+if ! grep -q "^ARCANE_ADMIN_PASSWORD=" "${ENV_FILE}"; then
+  echo "ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD:-arcane-admin}" >> "${ENV_FILE}"
+fi
+if ! grep -q "^ARCANE_BOOTSTRAP_PORT=" "${ENV_FILE}"; then
+  echo "ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT:-8005}" >> "${ENV_FILE}"
+fi
+if ! grep -q "^ARCANE_PROXY_USER=" "${ENV_FILE}"; then
+  echo "ARCANE_PROXY_USER=${ARCANE_PROXY_USER:-admin}" >> "${ENV_FILE}"
+fi
+if ! grep -q "^ARCANE_PROXY_PASSWORD=" "${ENV_FILE}"; then
+  echo "ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD:-arcane-bootstrap-admin}" >> "${ENV_FILE}"
+fi
+
+# Re-source .env to guarantee accurate variables in current shell
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
 
 # ------------------------------------------------------------------------------
 # 2. Configure Host 7-Day Log Retention

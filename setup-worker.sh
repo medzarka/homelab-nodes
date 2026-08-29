@@ -72,26 +72,36 @@ else
   ARCANE_AGENT_TOKEN="${ARCANE_AGENT_TOKEN:-}"
   SWARM_WORKER_TOKEN="${SWARM_WORKER_TOKEN:-}"
   UPDATE_DAY="${UPDATE_DAY:-Sun}"
-  UPDATE_TIME="${UPDATE_TIME:-04:00}"
+# If .env does not exist, create it from worker-join.env, template or defaults
+if [ ! -f "${ENV_FILE}" ]; then
+  if [ -f "${SCRIPT_DIR}/worker-join.env" ]; then
+    cp "${SCRIPT_DIR}/worker-join.env" "${ENV_FILE}"
+  elif [ -f "${SCRIPT_DIR}/.env.example" ]; then
+    cp "${SCRIPT_DIR}/.env.example" "${ENV_FILE}"
+    sed -i.bak "s|^NODE_ROLE=.*|NODE_ROLE=WORKER|" "${ENV_FILE}" 2>/dev/null && rm -f "${ENV_FILE}.bak"
+  else
+    cat << EOF > "${ENV_FILE}"
+NODE_ROLE=WORKER
+NODE_NAME=${TS_HOSTNAME:-worker-node}
+TS_HOSTNAME=${TS_HOSTNAME:-worker-node}
+TS_AUTHKEY=${TS_AUTHKEY:-}
+TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
+SHARED_NETWORK=${SHARED_NETWORK:-shared_net}
+SWARM_NETWORK=${SWARM_NETWORK:-homelab_swarm_net}
+MASTER_TAILSCALE_IP=${MASTER_TAILSCALE_IP:-}
+ARCANE_SERVER_URL=http://${MASTER_TAILSCALE_IP:-127.0.0.1}:3552
+ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN:-}
+ARCANE_AGENT_NAME=${TS_HOSTNAME:-worker-node}
+SWARM_WORKER_TOKEN=${SWARM_WORKER_TOKEN:-}
+UPDATE_DAY=${UPDATE_DAY:-Sun}
+UPDATE_TIME=${UPDATE_TIME:-04:00}
+EOF
+  fi
 fi
 
-# Write/Update worker .env
-cat << EOF > "${ENV_FILE}"
-NODE_ROLE=WORKER
-NODE_NAME=${TS_HOSTNAME}
-TS_HOSTNAME=${TS_HOSTNAME}
-TS_AUTHKEY=${TS_AUTHKEY}
-TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
-SHARED_NETWORK=${SHARED_NETWORK}
-SWARM_NETWORK=${SWARM_NETWORK}
-MASTER_TAILSCALE_IP=${MASTER_TAILSCALE_IP}
-ARCANE_SERVER_URL=http://${MASTER_TAILSCALE_IP}:3552
-ARCANE_AGENT_TOKEN=${ARCANE_AGENT_TOKEN}
-ARCANE_AGENT_NAME=${TS_HOSTNAME}
-SWARM_WORKER_TOKEN=${SWARM_WORKER_TOKEN}
-UPDATE_DAY=${UPDATE_DAY}
-UPDATE_TIME=${UPDATE_TIME}
-EOF
+# Re-source .env to guarantee accurate variables in current shell
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
 
 # ------------------------------------------------------------------------------
 # 2. Configure Host 7-Day Log Retention
