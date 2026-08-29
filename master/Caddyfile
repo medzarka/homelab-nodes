@@ -1,13 +1,16 @@
 {
     admin off
+    auto_https disable_redirects
 }
 
-:{$ARCANE_BOOTSTRAP_PORT:8005} {
+https://:{$ARCANE_BOOTSTRAP_PORT:8005} {
     # --------------------------------------------------------------------------
     # Automatic Internal TLS (Encrypts passwords, cookies & traffic over HTTPS)
     # Generates a self-signed TLS cert on-the-fly for any IP or domain connecting.
     # --------------------------------------------------------------------------
-    tls internal
+    tls internal {
+        on_demand
+    }
 
     # --------------------------------------------------------------------------
     # HTTP Basic Authentication (Shields Arcane from public port scanners & brute-force)
