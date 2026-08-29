@@ -35,6 +35,9 @@ services:
     restart: unless-stopped
     environment:
       - APP_URL=${ARCANE_APP_URL:-http://localhost:3552}
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
+      - ADDRESS_HEADER=x-forwarded-for
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - JWT_SECRET=${JWT_SECRET:-}
       - ALLOW_CLI_PASSWORD_RESET=${ALLOW_CLI_PASSWORD_RESET:-true}
