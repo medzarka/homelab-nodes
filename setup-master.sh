@@ -67,6 +67,10 @@ else
   ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
   SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
   SWARM_NETWORK="${SWARM_NETWORK:-homelab_swarm_net}"
+  UPDATE_DAY="${UPDATE_DAY:-Sun}"
+  UPDATE_TIME="${UPDATE_TIME:-04:00}"
+fi
+
 # Ensure persistent data directory exists
 DATA_DIR="${DATA_DIR:-/srv/data}"
 mkdir -p "${DATA_DIR}/arcane"
