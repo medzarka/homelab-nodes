@@ -62,6 +62,39 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ============================================================================
+  # 🛡️ Arcane Secure Bootstrap Reverse Proxy (Lightweight Caddy + Basic Auth)
+  # ============================================================================
+  # Provides immediate, secure out-of-band access to Arcane before Traefik is deployed.
+  arcane-proxy:
+    image: caddy:alpine
+    container_name: arcane_proxy
+    restart: unless-stopped
+    ports:
+      - "${ARCANE_BOOTSTRAP_PORT:-8005}:${ARCANE_BOOTSTRAP_PORT:-8005}"
+    environment:
+      - ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT:-8005}
+      - ARCANE_PROXY_USER=${ARCANE_PROXY_USER:-admin}
+      - ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD:-arcane-bootstrap-admin}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - shared_net
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        HASH=$$(caddy hash-password --plaintext "$$ARCANE_PROXY_PASSWORD")
+        export ARCANE_PROXY_HASH="$$HASH"
+        echo ">>> [Arcane Bootstrap Proxy] Starting Caddy on port $$ARCANE_BOOTSTRAP_PORT for user '$$ARCANE_PROXY_USER'..."
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      - arcane
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   shared_net:
     name: ${SHARED_NETWORK:-shared_net}

@@ -4,6 +4,7 @@
 > * **Zero-Trust Network**: Multi-host WireGuard mesh interconnect via **Tailscale** with strict **Firewalld** zoning (`iptables: false`).
 > * **Unified Identity & Ingress**: Centralized reverse proxy via **Traefik v3**, **Authelia SSO (2FA)**, and **LLDAP Directory**.
 > * **Cluster Orchestration & GitOps**: High-availability **Docker Swarm** managed declaratively via **Arcane Cockpit**.
+> * **Out-of-Band Bootstrap Ingress**: Lightweight Caddy reverse proxy with HTTP Basic Auth on Port `8005` for immediate, secure setup before Traefik is deployed.
 > * **End-to-End Observability**: Centralized portal (**Homepage**), metrics (**Beszel**), real-time logs (**Dozzle**), and uptime monitoring (**Uptime Kuma**).
 > * **Sovereign Local AI & Compute**: Distributed inference (**LiteLLM**, **Ollama**, **Qdrant**, **Mem0**, **Hermes Agents**).
 > * **Private Cloud & Storage**: Encrypted data synchronization, automated backups, and multi-cloud mirrors.
@@ -22,22 +23,25 @@ A unified, hardened, and automated node initialization suite designed to bootstr
                                 [ Public Internet ]
                                          │
                      ┌───────────────────┴───────────────────┐
-                     │ (Ports 22, 80, 443)                   │ (Port 22 only)
+                     │ (Ports 22, 80, 443, 8005)             │ (Port 22 only)
                      ▼                                       ▼
         ┌──────────────────────────┐            ┌──────────────────────────┐
         │  MASTER NODE (Cloud VPS) │            │  WORKER NODE (Compute/Edge)
-        │  • Firewalld: 22, 80, 443│            │  • Firewalld: 22 only    │
-        │  • tailscale0: TRUSTED   │            │  • tailscale0: TRUSTED   │
-        │  • Journald: max 7 days  │            │  • Journald: max 7 days  │
-        │  • Docker iptables: false│            │  • Docker iptables: false│
-        │  • Weekly Reboot Timer   │            │  • Weekly Reboot Timer   │
-        ├──────────────────────────┤            ├──────────────────────────┤
-        │ DOCKER SERVICES:         │            │ DOCKER SERVICES:         │
-        │ ├─ Tailscale (Host Net)  │◄──────────►│ ├─ Tailscale (Host Net)  │
-        │ │  (Mesh IP: 100.x.y.1)  │  Encrypted │ │  (Mesh IP: 100.x.y.2)  │
-        │ ├─ Arcane Manager (:3552)│ WireGuard  │ ├─ Arcane Agent          │
-        │ └─ Swarm Leader (2377)   │  Over VPN  │ └─ Swarm Worker          │
-        └──────────────────────────┘            └──────────────────────────┘
+        │  • Firewalld: 22,80,443, │            │  • Firewalld: 22 only    │
+        │    8005 (Bootstrap Proxy)│            │  • tailscale0: TRUSTED   │
+        │  • tailscale0: TRUSTED   │            │  • Journald: max 7 days  │
+        │  • Journald: max 7 days  │            │  • Docker iptables: false│
+        │  • Docker iptables: false│            │  • Weekly Reboot Timer   │
+        │  • Weekly Reboot Timer   │            ├──────────────────────────┤
+        ├──────────────────────────┤            │ DOCKER SERVICES:         │
+        │ DOCKER SERVICES:         │◄──────────►│ ├─ Tailscale (Host Net)  │
+        │ ├─ Tailscale (Host Net)  │  Encrypted │ │  (Mesh IP: 100.x.y.2)  │
+        │ │  (Mesh IP: 100.x.y.1)  │ WireGuard  │ ├─ Arcane Agent          │
+        │ ├─ Arcane Manager (:3552)│  Over VPN  │ └─ Swarm Worker          │
+        │ ├─ Arcane Proxy (:8005)  │            └──────────────────────────┘
+        │ │  (Caddy + Basic Auth)  │
+        │ └─ Swarm Leader (2377)   │
+        └──────────────────────────┘
 ```
 
 ---
@@ -48,24 +52,29 @@ A unified, hardened, and automated node initialization suite designed to bootstr
    - **Operating Systems**: Ubuntu (22.04 / 24.04), Debian (11 / 12 / 13), Oracle Linux 9 / 10, RHEL 9 / 10.
    - **Architectures**: x86_64 (`amd64`) and ARM64 (`aarch64` / Orange Pi / Raspberry Pi / Ampere).
 2. **Strict Firewall Control (`firewalld`)**:
-   - **Master Node**: Public zone permits strictly `ssh` (22), `http` (80), and `https` (443).
+   - **Master Node**: Public zone permits strictly `ssh` (22), `http` (80), `https` (443), and `8005` (Arcane Bootstrap Proxy).
    - **Worker Nodes**: Public zone permits **only** `ssh` (22).
    - **Inter-Node Trust**: The `tailscale0` VPN interface is placed into the `trusted` zone. All cluster management, Swarm gossip, Serf, overlay traffic, and Arcane Agent telemetry flow unrestricted across the encrypted private mesh.
-3. **Docker Firewall Bypass Prevention (`"iptables": false`)**:
+3. **Out-of-Band Arcane Bootstrap Proxy (Port 8005)**:
+   - **Solves the Bootstrap Paradox**: Allows immediate web browser access to Arcane before `homelab-gateway` (Traefik) is deployed.
+   - **Two-Layer Defense**:
+     - *Layer 1 (Network Proxy)*: HTTP Basic Auth prevents port scanners and bots from reaching Arcane.
+     - *Layer 2 (Application Auth)*: Arcane JWT/password login.
+   - **Native WebSocket Support**: Powered by lightweight Caddy Alpine to seamlessly stream container logs and interactive terminals.
+4. **Docker Firewall Bypass Prevention (`"iptables": false`)**:
    - Containers never open ports directly on the host's public firewall.
    - NAT masquerading is enabled in Firewalld for seamless outbound container routing.
-4. **Host 7-Day Log Retention**:
+5. **Host 7-Day Log Retention**:
    - Configures `systemd-journald` with `MaxRetentionSec=7day`, `SystemMaxUse=500M`, and `MaxFileSec=1day`.
    - Automatically vacuums older logs immediately.
-5. **Scheduled Weekly Updates & Reboot**:
+6. **Scheduled Weekly Updates & Reboot**:
    - Automated systemd timer (`homelab-auto-update.timer`) runs non-interactive system package updates followed by a safe system reboot on user-specified day/time.
-6. **Containerized Tailscale & Arcane**:
+7. **Containerized Tailscale & Arcane**:
    - Tailscale runs inside a Docker container using host networking and `/dev/net/tun`.
    - Arcane Manager is deployed on the Master node; Arcane Agent is deployed on Worker nodes.
-7. **Tailscale Exit Node & Kernel IP Forwarding**:
+8. **Tailscale Exit Node & Kernel IP Forwarding**:
    - Automatically configures Linux kernel packet forwarding (`net.ipv4.ip_forward = 1` and `net.ipv6.conf.all.forwarding = 1` in `/etc/sysctl.d/99-tailscale-forwarding.conf`).
    - Automatically advertises the node as a Tailscale Exit Node (`--advertise-exit-node`), allowing secure encrypted internet routing for your remote devices.
-
 
 ---
 
@@ -75,6 +84,7 @@ A unified, hardened, and automated node initialization suite designed to bootstr
 homelab-nodes/
 ├── README.md                           # Documentation & operations guide
 ├── .env.example                        # Template environment variables (NODE_ROLE=MASTER/WORKER)
+├── .env                                # Active environment configuration
 ├── setup.sh                            # 🌟 Unified bootstrap orchestrator (dispatches based on NODE_ROLE)
 ├── setup-master.sh                     # Master Node bootstrap & hardening script
 ├── setup-worker.sh                     # Worker Node bootstrap & hardening script
@@ -90,7 +100,8 @@ homelab-nodes/
 │   └── 06-storage-optimizations.sh     # Deep disk I/O, udev scheduler, sysctl anti-freeze & RAM-disk
 ├── master/
 │   ├── .env.example                    # Master environment variables (NODE_ROLE=MASTER)
-│   └── docker-compose.yaml             # Tailscale + Arcane Manager stack
+│   ├── Caddyfile                       # Out-of-band bootstrap proxy config (Basic Auth + WebSockets)
+│   └── docker-compose.yaml             # Tailscale + Arcane Manager + Bootstrap Proxy stack
 └── worker/
     ├── .env.example                    # Worker environment variables (NODE_ROLE=WORKER)
     └── docker-compose.yaml             # Tailscale + Arcane Agent stack
@@ -123,6 +134,18 @@ cd homelab-nodes
 sudo ./setup-master.sh
 ```
 
+**Accessing Arcane on the Master Node:**
+1. **Via Out-of-Band Bootstrap Proxy (Immediate, from anywhere):**
+   - URL: `http://<SERVER_PUBLIC_IP>:8005`
+   - Layer 1 (Proxy Basic Auth): `admin` / `<ARCANE_PROXY_PASSWORD>` (configured in `.env`)
+   - Layer 2 (Arcane Application Login): `arcane` / `arcane-admin`
+2. **Via Tailscale VPN Mesh:**
+   - URL: `http://<MASTER_TAILSCALE_IP>:3552` (or `http://100.x.y.z:3552`)
+3. **Via Traefik Edge Gateway (Once `homelab-gateway` is deployed):**
+   - URL: `https://arcane.bluewave.work`
+
+---
+
 #### 🅱️ Setting Up a Standard Worker Node (Compute / Edge / VPS)
 ```bash
 cd homelab-nodes
@@ -148,14 +171,11 @@ sudo ./worker-deeper-optimized.sh
 
 When `setup-master.sh` finishes initializing the Master node, it automatically generates a ready-to-use **`worker-join.env`** configuration containing the Master's Tailscale mesh IP, Arcane URL, Swarm join token, and overlay network definitions.
 
-#### 🧙 Method 1: Connecting a Worker Node to Arcane via Web UI (Recommended)
-
-To connect any Worker node to Arcane as an **Edge Agent** via the Web UI:
+#### 🧙 Connecting a Worker Node to Arcane via Web UI:
 
 1. **Access Arcane Cockpit on the Master Node**:
    Open your browser and navigate to:
-   👉 **`http://<MASTER_TAILSCALE_IP>:3552`** (or `http://100.x.y.z:3552`)
-   *(Default Login — Username: `arcane` | Password: `arcane-admin`)*
+   👉 **`http://<SERVER_PUBLIC_IP>:8005`** (or `http://100.x.y.z:3552`)
 
 2. **Generate the Agent Token**:
    - In the left sidebar, click **Environments** (or **Nodes**).
@@ -178,21 +198,9 @@ To connect any Worker node to Arcane as an **Edge Agent** via the Web UI:
      cd homelab-nodes
      sudo ./setup.sh
      ```
-   - *(If running interactively without a pre-filled file, `./setup.sh` will prompt for the **Arcane Agent Token** directly).*
 
 4. **Verify in Arcane UI**:
    - In Arcane Dashboard, your Worker node will transition to **🟢 Online**.
-   - You can now monitor containers, inspect logs, and manage workloads across all nodes from one central cockpit.
-
----
-
-**What the script does automatically:**
-1. Configures 7-day log retention.
-2. Sets up weekly auto-update + reboot timer.
-3. Resets Firewalld and locks down `public` to **SSH (22) only**, placing `tailscale0` in `trusted`.
-4. Installs Docker CE with `"iptables": false`.
-5. Starts **Tailscale** and connects the **Arcane Agent** to your Master node.
-6. Joins the **Docker Swarm** cluster across the Tailscale mesh.
 
 ---
 
@@ -208,96 +216,25 @@ sudo ./audit-node.sh --role master
 sudo ./audit-node.sh --role worker
 ```
 
-### Sample Audit Output:
-```
-====================================================================
-         🔍 HOMELAB NODE SECURITY & COMPLIANCE AUDIT                
-====================================================================
- Auditing Target Role: WORKER
- Timestamp:            2026-08-26T05:50:00+01:00
- Hostname:             worker-node-01
-
-1. 🖥️ Operating System & Architecture
-  [ PASS ] Operating System: Oracle Linux Server 9.4 (Kernel: 5.15.0-205.149.5.1.el9uek.aarch64)
-  [ PASS ] CPU Architecture: aarch64
-
-2. 🛡️ Firewalld Firewall Hardening
-  [ PASS ] Firewalld service is active and running.
-  [ PASS ] Public zone permits SSH service.
-  [ PASS ] Public zone NAT masquerading is ENABLED (Outbound container routing active).
-  [ PASS ] Worker public zone is strictly locked down (SSH only, no public HTTP/HTTPS).
-  [ PASS ] Interface 'tailscale0' is assigned to the 'trusted' zone (Inter-node mesh open).
-  [ PASS ] Docker bridges (docker0, docker_gwbridge) are isolated from trusted zone (No zone conflicts).
-
-3. 🐳 Docker Engine & Daemon Hardening
-  [ PASS ] Docker Engine is active: Docker version 27.1.1
-  [ PASS ] Configuration file /etc/docker/daemon.json exists.
-  [ PASS ] Docker 'iptables: false' is configured (Firewall bypass prevented).
-  [ PASS ] Docker 'live-restore: true' is configured (Zero-downtime container uptime).
-  [ PASS ] Docker container log rotation limits are configured.
-
-4. 🐝 Docker Swarm Cluster & Overlay Mesh
-  [ PASS ] Docker Swarm is ACTIVE (Role: Worker Node).
-  [ PASS ] Overlay network 'homelab_swarm_net' is available.
-
-5. 📜 Host Logging System (7-Day Retention)
-  [ PASS ] Journald 7-day retention policy is active (/etc/systemd/journald.conf.d/00-homelab-retention.conf).
-  [ INFO ] Current Journal Disk Footprint: 88.0M
-
-6. ⏰ Automated Weekly Maintenance Timer
-  [ PASS ] Systemd timer 'homelab-auto-update.timer' is ENABLED and ACTIVE.
-  [ INFO ] Next scheduled update & reboot: Sun 2026-08-30 04:00:00 UTC
-
-7. 📦 Containerized Services (Tailscale & Arcane)
-  [ PASS ] Tailscale container is running (Mesh IP: 100.101.102.2).
-  [ PASS ] Arcane Agent container is running.
-
-====================================================================
-                     AUDIT RESULTS SUMMARY                         
-====================================================================
-  Passed Checks:   16
-  Warnings:        0
-  Failed Checks:   0
-
-🎉 COMPLIANCE AUDIT PASSED! This node satisfies all Homelab standards.
-```
-
 ---
 
-## ⚙️ Configuration Reference (`daemon.json` & Variables)
+## ⚙️ Environment Variables Reference (`.env`)
 
-### Hardened Production `/etc/docker/daemon.json`
-```json
-{
-  "iptables": false,
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  },
-  "max-concurrent-downloads": 3,
-  "max-concurrent-uploads": 3
-}
-```
-
-### Systemd Weekly Maintenance Schedule
-- Check timer status: `systemctl status homelab-auto-update.timer`
-- View upcoming run time: `systemctl list-timers homelab-auto-update.timer`
-- View past upgrade logs: `journalctl -u homelab-auto-update.service`
-
-### Tailscale Manual Authentication (If Auth Key is not used)
-```bash
-sudo docker exec -it tailscale tailscale up
-```
-
-### Firewalld Useful Inspection Commands
-```bash
-# View active zones and assigned interfaces
-sudo firewall-cmd --get-active-zones
-
-# View public zone rules
-sudo firewall-cmd --zone=public --list-all
-
-# View trusted zone rules
-sudo firewall-cmd --zone=trusted --list-all
-```
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `NODE_ROLE` | `MASTER` | Role: `MASTER`, `WORKER`, or `WORKER_DEEPER_OPTIMIZED` |
+| `NODE_NAME` | `master-node` | Hostname and node identifier in Swarm & Arcane |
+| `TS_HOSTNAME` | `master-node` | Tailscale machine hostname on your tailnet |
+| `TS_AUTHKEY` | *(empty)* | Optional non-interactive Tailscale authentication key |
+| `TS_EXTRA_ARGS` | `--reset --advertise-exit-node` | Arguments passed to `tailscale up` (Exit node enabled) |
+| `SHARED_NETWORK` | `shared_net` | Local Docker bridge network name |
+| `SWARM_NETWORK` | `homelab_swarm_net` | Multi-host Docker Swarm attachable overlay network name |
+| `DATA_DIR` | `/srv/data` | Root directory for persistent data mounts |
+| `ARCANE_PORT` | `3552` | Internal host port for Arcane core container |
+| `ARCANE_BOOTSTRAP_PORT` | `8005` | External public port for Caddy out-of-band bootstrap proxy |
+| `ARCANE_PROXY_USER` | `admin` | HTTP Basic Auth username for bootstrap proxy |
+| `ARCANE_PROXY_PASSWORD` | `arcane-bootstrap-admin` | HTTP Basic Auth password for bootstrap proxy |
+| `ENCRYPTION_KEY` | *(auto-generated)* | 32-byte hex key for Arcane DB secret encryption |
+| `JWT_SECRET` | *(auto-generated)* | 32-byte hex key for Arcane authentication tokens |
+| `UPDATE_DAY` | `Sun` | Day of week for automated updates & reboot (`Sun`..`Sat`) |
+| `UPDATE_TIME` | `04:00` | 24-hour time for automated maintenance (`HH:MM`) |

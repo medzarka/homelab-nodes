@@ -60,11 +60,14 @@ done
 # Always permit SSH on public zone
 firewall-cmd --permanent --zone=public --add-service=ssh
 
+ARCANE_BOOTSTRAP_PORT="${ARCANE_BOOTSTRAP_PORT:-8005}"
+
 # Configure Master vs Worker public ports
 if [ "$NODE_ROLE" = "master" ]; then
-  echo "Permitting HTTP (80) and HTTPS (443) on Master public zone..."
+  echo "Permitting HTTP (80), HTTPS (443), and Arcane Bootstrap Proxy (${ARCANE_BOOTSTRAP_PORT}) on Master public zone..."
   firewall-cmd --permanent --zone=public --add-service=http
   firewall-cmd --permanent --zone=public --add-service=https
+  firewall-cmd --permanent --zone=public --add-port="${ARCANE_BOOTSTRAP_PORT}/tcp"
 else
   echo "Enforcing SSH-only on Worker public zone (blocking external HTTP/HTTPS)..."
   firewall-cmd --permanent --zone=public --remove-service=http 2>/dev/null || true
@@ -103,9 +106,10 @@ firewall-cmd --permanent --policy docker-forwarding --add-ingress-zone public 2>
 firewall-cmd --permanent --policy docker-forwarding --set-target REJECT 2>/dev/null || true
 
 if [ "$NODE_ROLE" = "master" ]; then
-  echo "Permitting HTTP/HTTPS forwarding to Docker on Master node (for Traefik)..."
+  echo "Permitting HTTP/HTTPS and Bootstrap Proxy forwarding to Docker on Master node..."
   firewall-cmd --permanent --policy docker-forwarding --add-port=80/tcp 2>/dev/null || true
   firewall-cmd --permanent --policy docker-forwarding --add-port=443/tcp 2>/dev/null || true
+  firewall-cmd --permanent --policy docker-forwarding --add-port="${ARCANE_BOOTSTRAP_PORT}/tcp" 2>/dev/null || true
 fi
 
 # 5.1 Deploy Docker Firewalld Hardening Systemd Service
@@ -116,9 +120,9 @@ fi
 if [ "${DOCKER_IPTABLES_HARDENING:-true}" = "true" ]; then
   echo "Deploying robust Docker Firewalld Hardening systemd service..."
   
-  # Master nodes allow HTTP/HTTPS (80,443) for Traefik ingress. Workers only allow internal traffic.
+  # Master nodes allow HTTP/HTTPS (80,443) and Arcane Bootstrap Proxy for ingress. Workers only allow internal traffic.
   if [ "$NODE_ROLE" = "master" ]; then
-    DOCKER_USER_RULES="iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j RETURN;"
+    DOCKER_USER_RULES="iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443,${ARCANE_BOOTSTRAP_PORT} -j RETURN;"
   else
     DOCKER_USER_RULES=""
   fi

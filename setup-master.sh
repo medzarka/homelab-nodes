@@ -68,6 +68,9 @@ else
   TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
   DATA_DIR="${DATA_DIR:-/srv/data}"
   ARCANE_PORT="${ARCANE_PORT:-3552}"
+  ARCANE_BOOTSTRAP_PORT="${ARCANE_BOOTSTRAP_PORT:-8005}"
+  ARCANE_PROXY_USER="${ARCANE_PROXY_USER:-admin}"
+  ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
   SHARED_NETWORK="${SHARED_NETWORK:-shared_net}"
   SWARM_NETWORK="${SWARM_NETWORK:-homelab_swarm_net}"
   UPDATE_DAY="${UPDATE_DAY:-Sun}"
@@ -77,6 +80,9 @@ fi
 # Auto-generate 32-byte hexadecimal encryption and JWT secrets for Arcane if not predefined
 ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+ARCANE_BOOTSTRAP_PORT="${ARCANE_BOOTSTRAP_PORT:-8005}"
+ARCANE_PROXY_USER="${ARCANE_PROXY_USER:-admin}"
+ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
 
 # Write/Update master .env
 mkdir -p "${DATA_DIR}/arcane"
@@ -91,6 +97,9 @@ TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
+ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT}
+ARCANE_PROXY_USER=${ARCANE_PROXY_USER}
+ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD}
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 JWT_SECRET=${JWT_SECRET}
 ALLOW_CLI_PASSWORD_RESET=true
@@ -261,16 +270,22 @@ fi
 # ------------------------------------------------------------------------------
 # 9. Completion Summary & Worker Onboarding Instructions
 # ------------------------------------------------------------------------------
+PUBLIC_IP="$(curl -s -4 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')"
+
 echo ""
 echo "===================================================================="
 echo "🎉 MASTER NODE SETUP & HARDENING COMPLETED SUCCESSFULLY!"
 echo "===================================================================="
 echo " 🌐 Tailscale Mesh IP:     ${TS_IP}"
-echo " 🧙 Arcane Cockpit URL:    http://${TS_IP}:${ARCANE_PORT} (or http://localhost:${ARCANE_PORT})"
-echo " 🔑 Default Arcane Login:  User: arcane | Pass: arcane-admin"
+echo " 🧙 Arcane Tailscale URL:  http://${TS_IP}:${ARCANE_PORT} (or http://localhost:${ARCANE_PORT})"
+echo " 🔑 Arcane App Login:      User: arcane | Pass: arcane-admin"
+echo ""
+echo " 🛡️ Arcane Bootstrap URL:  http://${PUBLIC_IP}:${ARCANE_BOOTSTRAP_PORT}"
+echo "    • Layer 1 (Proxy Auth): User: ${ARCANE_PROXY_USER} | Pass: ${ARCANE_PROXY_PASSWORD}"
+echo "    • Layer 2 (Arcane App): User: arcane | Pass: arcane-admin"
 echo ""
 echo " 🛡️ Firewall Security:"
-echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS)"
+echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS), ${ARCANE_BOOTSTRAP_PORT} (Bootstrap Proxy)"
 echo "   • Tailscale Mesh: 100% Trusted for inter-node communication"
 echo "   • Kernel IP Forwarding: Enabled (IPv4/IPv6 forwarding active)"
 echo ""
@@ -280,7 +295,7 @@ echo ""
 echo " 📄 Auto-Generated Worker Onboarding File: ${WORKER_JOIN_ENV}"
 echo "--------------------------------------------------------------------"
 echo " To onboard a new Worker node with zero manual configuration:"
-echo " 1. Log into Arcane UI (http://${TS_IP}:${ARCANE_PORT}) -> Nodes -> Add Node"
+echo " 1. Log into Arcane UI (http://${PUBLIC_IP}:${ARCANE_BOOTSTRAP_PORT} or http://${TS_IP}:${ARCANE_PORT}) -> Nodes -> Add Node"
 echo " 2. Copy the generated Agent Token and add it to ${WORKER_JOIN_ENV}"
 echo " 3. Copy the file to your worker machine:"
 echo "    👉 scp ${WORKER_JOIN_ENV} user@<worker-ip>:~/homelab-nodes/.env"

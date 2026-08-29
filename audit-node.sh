@@ -130,10 +130,16 @@ if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld;
   fi
 
   if [ "$NODE_ROLE" = "master" ]; then
+    PUB_PORTS="$(firewall-cmd --zone=public --list-ports 2>/dev/null || echo '')"
     if [[ "$PUB_SERVICES" =~ "http" ]] && [[ "$PUB_SERVICES" =~ "https" ]]; then
       pass "Master public zone permits HTTP (80) and HTTPS (443)."
     else
       warn "Master public zone is missing HTTP/HTTPS service (expected for web ingress)."
+    fi
+    if [[ "$PUB_PORTS" =~ "8005" ]]; then
+      pass "Master public zone permits Arcane Bootstrap Proxy port (8005/tcp)."
+    else
+      info "Port 8005/tcp not detected in public ports (custom port or closed)."
     fi
   else
     if [[ "$PUB_SERVICES" =~ "http" ]] || [[ "$PUB_SERVICES" =~ "https" ]]; then
@@ -321,6 +327,11 @@ if command -v docker &>/dev/null && systemctl is-active --quiet docker; then
       pass "Arcane Manager container is running."
     else
       fail "Arcane Manager container is NOT running!"
+    fi
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -qE "^(arcane_proxy|arcane-proxy)$"; then
+      pass "Arcane Bootstrap Proxy (Caddy) container is running."
+    else
+      info "Arcane Bootstrap Proxy container is not running (optional/disabled)."
     fi
   else
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -qE "^(arcane-edge-agent|arcane-agent)$"; then

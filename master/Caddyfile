@@ -1,0 +1,24 @@
+{
+    admin off
+    auto_https off
+}
+
+:{$ARCANE_BOOTSTRAP_PORT:8005} {
+    # --------------------------------------------------------------------------
+    # HTTP Basic Authentication (Shields Arcane from public port scanners & brute-force)
+    # The password hash is computed on container startup via caddy hash-password.
+    # --------------------------------------------------------------------------
+    basic_auth {
+        {$ARCANE_PROXY_USER:admin} {$ARCANE_PROXY_HASH}
+    }
+
+    # --------------------------------------------------------------------------
+    # Reverse Proxy to Arcane Core Manager (includes WebSocket support for logs/exec)
+    # --------------------------------------------------------------------------
+    reverse_proxy arcane:3552 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
