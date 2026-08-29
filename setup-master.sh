@@ -74,6 +74,8 @@ fi
 # Auto-generate 32-byte hexadecimal encryption and JWT secrets for Arcane if not predefined
 ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+ARCANE_ADMIN_USER="${ARCANE_ADMIN_USER:-arcane}"
+ARCANE_ADMIN_PASSWORD="${ARCANE_ADMIN_PASSWORD:-arcane-admin}"
 ARCANE_BOOTSTRAP_PORT="${ARCANE_BOOTSTRAP_PORT:-8005}"
 ARCANE_PROXY_USER="${ARCANE_PROXY_USER:-admin}"
 ARCANE_PROXY_PASSWORD="${ARCANE_PROXY_PASSWORD:-$(openssl rand -hex 12 2>/dev/null || echo 'arcane-bootstrap-admin')}"
@@ -91,6 +93,8 @@ TS_EXTRA_ARGS="${TS_EXTRA_ARGS:---reset --advertise-exit-node}"
 DATA_DIR=${DATA_DIR}
 ARCANE_PORT=${ARCANE_PORT}
 ARCANE_APP_URL=http://localhost:${ARCANE_PORT}
+ARCANE_ADMIN_USER=${ARCANE_ADMIN_USER}
+ARCANE_ADMIN_PASSWORD=${ARCANE_ADMIN_PASSWORD}
 ARCANE_BOOTSTRAP_PORT=${ARCANE_BOOTSTRAP_PORT}
 ARCANE_PROXY_USER=${ARCANE_PROXY_USER}
 ARCANE_PROXY_PASSWORD=${ARCANE_PROXY_PASSWORD}
@@ -266,11 +270,11 @@ echo "🎉 MASTER NODE SETUP & HARDENING COMPLETED SUCCESSFULLY!"
 echo "===================================================================="
 echo " 🌐 Tailscale Mesh IP:     ${TS_IP}"
 echo " 🧙 Arcane Tailscale URL:  http://${TS_IP}:${ARCANE_PORT} (or http://localhost:${ARCANE_PORT})"
-echo " 🔑 Arcane App Login:      User: arcane | Pass: arcane-admin"
+echo " 🔑 Arcane App Login:      User: ${ARCANE_ADMIN_USER} | Pass: ${ARCANE_ADMIN_PASSWORD}"
 echo ""
 echo " 🛡️ Arcane Bootstrap URL:  http://${PUBLIC_IP}:${ARCANE_BOOTSTRAP_PORT}"
 echo "    • Layer 1 (Proxy Auth): User: ${ARCANE_PROXY_USER} | Pass: ${ARCANE_PROXY_PASSWORD}"
-echo "    • Layer 2 (Arcane App): User: arcane | Pass: arcane-admin"
+echo "    • Layer 2 (Arcane App): User: ${ARCANE_ADMIN_USER} | Pass: ${ARCANE_ADMIN_PASSWORD}"
 echo ""
 echo " 🛡️ Firewall Security:"
 echo "   • Public Ports: 22 (SSH), 80 (HTTP), 443 (HTTPS), ${ARCANE_BOOTSTRAP_PORT} (Bootstrap Proxy)"
