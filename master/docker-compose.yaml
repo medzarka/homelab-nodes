@@ -48,6 +48,14 @@ services:
     networks:
       - shared_net
       - homelab_swarm_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.arcane.rule=Host(`arcane.${ROOT_DOMAIN:-example.com}`)"
+      - "traefik.http.routers.arcane.entrypoints=websecure"
+      - "traefik.http.routers.arcane.tls=true"
+      - "traefik.http.routers.arcane.middlewares=app-fail2ban@file,security-headers@file,compression@file"
+      - "traefik.http.services.arcane.loadbalancer.server.port=3552"
+      - "traefik.docker.network=${SWARM_NETWORK:-homelab_swarm_net}"
     logging:
       driver: "json-file"
       options:
