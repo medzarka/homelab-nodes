@@ -1,9 +1,14 @@
 {
     admin off
-    auto_https off
 }
 
 :{$ARCANE_BOOTSTRAP_PORT:8005} {
+    # --------------------------------------------------------------------------
+    # Automatic Internal TLS (Encrypts passwords, cookies & traffic over HTTPS)
+    # Generates a self-signed TLS cert on-the-fly for any IP or domain connecting.
+    # --------------------------------------------------------------------------
+    tls internal
+
     # --------------------------------------------------------------------------
     # HTTP Basic Authentication (Shields Arcane from public port scanners & brute-force)
     # The password hash is computed on container startup via caddy hash-password.
@@ -19,9 +24,9 @@
         header_up Host {host}
         header_up X-Forwarded-Host {host}
         header_up X-Forwarded-Port {port}
-        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Proto https
         header_up X-Forwarded-For {remote_host}
         header_up X-Real-IP {remote_host}
-        header_up Origin {scheme}://{host}
+        header_up Origin https://{host}
     }
 }

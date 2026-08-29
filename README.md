@@ -173,7 +173,7 @@ When `setup-master.sh` finishes initializing the Master node, it automatically g
 
 1. **Access Arcane Cockpit on the Master Node**:
    Open your browser and navigate to:
-   👉 **`http://<SERVER_PUBLIC_IP>:8005`** (or `http://100.x.y.z:3552`)
+   👉 **`https://<SERVER_PUBLIC_IP>:8005`** *(TLS Encrypted, accept self-signed cert on first visit)* or `http://100.x.y.z:3552` via Tailscale.
 
 2. **Generate the Agent Token**:
    - In the left sidebar, click **Environments** (or **Nodes**).
