@@ -133,14 +133,14 @@ sudo ./setup-master.sh
 ```
 
 **Accessing Arcane on the Master Node:**
-1. **Via Out-of-Band Bootstrap Proxy (Immediate, from anywhere):**
-   - URL: `http://<SERVER_PUBLIC_IP>:8005`
+1. **Via Out-of-Band Bootstrap Proxy (Immediate HTTPS, from anywhere):**
+   - URL: `https://<SERVER_PUBLIC_IP>:8005` (Accept self-signed TLS cert on first visit)
    - Layer 1 (Proxy Basic Auth): `admin` / `<ARCANE_PROXY_PASSWORD>` (configured in `.env`)
-   - Layer 2 (Arcane Application Login): `arcane` / `arcane-admin`
+   - Layer 2 (Arcane Application): Configure admin account or login directly in UI
 2. **Via Tailscale VPN Mesh:**
    - URL: `http://<MASTER_TAILSCALE_IP>:3552` (or `http://100.x.y.z:3552`)
 3. **Via Traefik Edge Gateway (Once `homelab-gateway` is deployed):**
-   - URL: `https://arcane.bluewave.work`
+   - URL: `https://arcane.${ROOT_DOMAIN:-example.com}`
 
 ---
 

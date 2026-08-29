@@ -53,7 +53,7 @@ services:
       - homelab_swarm_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.arcane.rule=Host(`arcane.${ROOT_DOMAIN:-bluewave.work}`)"
+      - "traefik.http.routers.arcane.rule=Host(`arcane.${ROOT_DOMAIN:-example.com}`)"
       - "traefik.http.routers.arcane.entrypoints=websecure"
       - "traefik.http.routers.arcane.tls=true"
       - "traefik.http.routers.arcane.middlewares=app-fail2ban@file,security-headers@file,compression@file"
